@@ -8,6 +8,36 @@ import {
   type GlassUniforms,
 } from "@/lib/webgl-renderer";
 
+/* ---- Module-level decode dedup ------------------------------------------
+ * One in-flight decode Promise per URL, shared across the preload effect,
+ * captureAsync, and Strict Mode's double-mount. Without this, each caller
+ * creates its own <img>, and when the same URL decodes simultaneously from
+ * multiple <img> elements the browser serialises and a later decode can
+ * stall by 10+ seconds waiting for the first to release.
+ *
+ * Keyed by `src`. Survives component remounts (module scope). HMR in dev
+ * clears it naturally with the module reload, which is the desired
+ * behaviour since the rest of the state resets too.
+ */
+const decodePromises = new Map<string, Promise<HTMLImageElement>>();
+
+function decodeImageOnce(src: string): Promise<HTMLImageElement> {
+  const existing = decodePromises.get(src);
+  if (existing) return existing;
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.decoding = "async";
+  img.src = src;
+  // `.decode()` returns a promise that resolves once the image is fully
+  // decoded and ready to be painted (drawImage / texImage2D). Wrap to
+  // return the Image itself so callers don't have to close over `img`.
+  const promise = img.decode().then(() => img);
+  decodePromises.set(src, promise);
+  // On decode failure, evict so a future call can retry.
+  promise.catch(() => decodePromises.delete(src));
+  return promise;
+}
+
 export interface GlassCanvasProps {
   /** Ref to the element whose area will be captured as the backdrop. */
   targetRef: React.RefObject<HTMLElement | null>;
@@ -154,20 +184,18 @@ export function GlassCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Warm the image cache so background switches are instant. */
+  /* Warm the image cache so background switches are instant. Shares
+     in-flight decodes with captureAsync via the module-level dedup map. */
   useEffect(() => {
     if (!preloadSrcs?.length) return;
     let cancelled = false;
     for (const src of preloadSrcs) {
       if (imgCacheRef.current.has(src)) continue;
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.decoding = "async";
-      img.src = src;
-      img
-        .decode()
-        .then(() => {
-          if (!cancelled) imgCacheRef.current.set(src, img);
+      decodeImageOnce(src)
+        .then((img) => {
+          if (!cancelled) {
+            imgCacheRef.current.set(src, img);
+          }
         })
         .catch(() => {});
     }
@@ -232,11 +260,10 @@ export function GlassCanvas({
         try {
           let img = imgCacheRef.current.get(fastImageSrc) ?? null;
           if (!img) {
-            img = new Image();
-            img.crossOrigin = "anonymous";
-            img.decoding = "async";
-            img.src = fastImageSrc;
-            await img.decode();
+            // Shared in-flight decode — if preload already started the
+            // decode for this URL, we await the same promise instead of
+            // kicking off a duplicate Image() that would contend with it.
+            img = await decodeImageOnce(fastImageSrc);
             if (cancelled) return;
             imgCacheRef.current.set(fastImageSrc, img);
           }
