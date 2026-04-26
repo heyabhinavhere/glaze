@@ -194,10 +194,15 @@ function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
-/** Decode + upload a backdrop. Fire-and-forget; if the lens is destroyed
- *  before the decode resolves, we skip the upload silently. Sub-task 3d
- *  adds the generation-counter race guard; for 3c we just check
- *  lens.destroyed at apply-time. */
+/** Decode + upload a backdrop. Fire-and-forget. Race-safe: snapshots the
+ *  lens generation at start; on resolve, if the generation no longer
+ *  matches (lens destroyed, or backdrop URL changed during decode), the
+ *  result is silently discarded. This handles three real races:
+ *    1. Mount → unmount race: lens destroyed mid-decode.
+ *    2. Strict-Mode mount/unmount/mount: a NEW lens with a NEW generation
+ *       takes over; the old promise's result is irrelevant.
+ *    3. handle.update({ backdrop: newURL }) mid-decode: old result must
+ *       not clobber the new state. */
 async function loadAndUploadBackdrop(
   lens: Lens,
   renderer: ReturnType<typeof acquire>,
@@ -207,9 +212,14 @@ async function loadAndUploadBackdrop(
     | HTMLVideoElement
     | HTMLCanvasElement,
 ): Promise<void> {
+  const startGeneration = lens.generation;
   try {
     const resolved = await resolveBackdrop(source);
-    if (lens.destroyed) return;
+    // Generation guard. If this is a stale promise (lens destroyed or
+    // backdrop changed during decode), discard the result. The decode
+    // itself is shared across same-URL calls via decodeImageOnce, so
+    // the work isn't wasted — just unused for this caller.
+    if (lens.destroyed || lens.generation !== startGeneration) return;
     lens.backdropSource = resolved;
     renderer.uploadBackdrop(lens, resolved);
   } catch (err) {

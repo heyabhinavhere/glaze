@@ -54,6 +54,19 @@ export class Lens {
   /** True once destroy() has run; subsequent calls are no-ops. */
   destroyed = false;
 
+  /** Monotonic counter incremented when state changes that should
+   *  invalidate in-flight async work (config update with new backdrop,
+   *  destroy, etc). Async backdrop decoders snapshot this at start;
+   *  on resolve, if the snapshot doesn't match the current value, the
+   *  result is silently discarded. Design §3.1, §M14. */
+  generation = 0;
+
+  /** True for `position: sticky` / `fixed` hosts. The shared renderer's
+   *  scroll listener re-reads getBoundingClientRect each frame for these
+   *  lenses (ResizeObserver doesn't fire on scroll-driven sticky moves).
+   *  Static / relative / absolute lenses skip the listener. Design §3.2. */
+  needsScrollUpdate = false;
+
   private readonly resizeObserver: ResizeObserver;
   private readonly originalHostPosition: string;
 
@@ -111,6 +124,14 @@ export class Lens {
       host.style.position = "relative";
     }
 
+    // Sticky/fixed lenses need per-frame rect updates because their
+    // screen position changes during scroll without firing a Resize
+    // Observer event. The shared renderer's scroll listener honors
+    // this flag.
+    if (computed.position === "sticky" || computed.position === "fixed") {
+      this.needsScrollUpdate = true;
+    }
+
     // Append as first child so subsequent host content stacks above it
     // (the user's actual button/text/etc renders ON TOP of the glass).
     host.insertBefore(this.canvas, host.firstChild);
@@ -131,9 +152,19 @@ export class Lens {
     this.resizeObserver.observe(host);
   }
 
-  /** Apply a partial update to the resolved LensConfig. */
+  /** Apply a partial update to the resolved LensConfig. Bumps
+   *  generation when fields change that should invalidate in-flight
+   *  async work — the backdrop is the canonical example (a new URL
+   *  starts a fresh decode; any earlier decode that resolves later
+   *  must be discarded). */
   applyUpdate(partial: GlassConfigUpdate): void {
     if (this.destroyed) return;
+    if (
+      partial.backdrop !== undefined ||
+      partial.backdropFrom !== undefined
+    ) {
+      this.generation++;
+    }
 
     // Most fields copy through 1:1.
     if (partial.radius !== undefined) {
@@ -185,10 +216,12 @@ export class Lens {
   }
 
   /** Idempotent. Removes the canvas, disconnects observers, restores
-   *  the host's original position style. */
+   *  the host's original position style. Bumps generation so any
+   *  in-flight async work (backdrop decode, etc.) discards its result. */
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.generation++;
     this.resizeObserver.disconnect();
     this.canvas.remove();
     this.host.removeAttribute("data-glaze-host");

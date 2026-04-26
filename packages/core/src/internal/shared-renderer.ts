@@ -79,19 +79,22 @@ export class SharedRenderer {
   /** The WebGL2 context. Kept readonly for callers; mutable internally. */
   readonly gl: WebGL2RenderingContext;
 
-  /** Compiled glass program (vertex + fragment for the body+rim shader). */
-  private readonly glassProgram: WebGLProgram;
-  /** Compiled blur program (separable Gaussian for the body-blur pipeline). */
-  private readonly blurProgram: WebGLProgram;
+  /** Compiled glass program. Mutable because context loss + restore
+   *  rebuilds the program with a fresh GL handle. */
+  private glassProgram: WebGLProgram;
+  /** Compiled blur program. Mutable for the same reason. */
+  private blurProgram: WebGLProgram;
 
-  /** Cached uniform locations for the glass program. */
-  private readonly glassUniforms: UniformMap;
+  /** Cached uniform locations for the glass program. Re-looked-up on
+   *  context restore. */
+  private glassUniforms: UniformMap;
   /** Cached uniform locations for the blur program. */
-  private readonly blurUniforms: UniformMap;
+  private blurUniforms: UniformMap;
 
   /** Shared full-screen quad VBO. The same six vertices serve every
-   *  draw call; per-lens viewport positioning happens via gl.viewport. */
-  private readonly vbo: WebGLBuffer;
+   *  draw call; per-lens viewport positioning happens via gl.viewport.
+   *  Mutable for context-restore rebuild. */
+  private vbo: WebGLBuffer;
 
   /** Performance-API timestamp at construction. Drives the u_time
    *  uniform for any time-dependent shader effects (currently none in
@@ -101,8 +104,16 @@ export class SharedRenderer {
   /** Registered lenses. Keyed by lens.id. */
   private readonly lenses = new Map<number, Lens>();
 
+  /** Count of currently-registered lenses with `position: sticky` /
+   *  `fixed`. The shared scroll listener attaches when this is > 0
+   *  and detaches when it drops to 0. */
+  private scrollLensCount = 0;
+
   /** Active rAF id, or null when no tick is pending. */
   private rafId: number | null = null;
+
+  /** True when WebGL context is lost. Render loop pauses until restore. */
+  private suspended = false;
 
   /** True once destroy() has run; subsequent calls are no-ops. */
   private destroyed = false;
@@ -132,12 +143,49 @@ export class SharedRenderer {
     }
     this.gl = gl;
 
-    this.glassProgram = compileProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER);
-    this.blurProgram = compileProgram(gl, BLUR_VERTEX, BLUR_FRAGMENT);
+    // Initial GL setup. The same routine runs on context-restored,
+    // because all resources (programs, VBO, FBO textures) are gone
+    // when the context is lost.
+    const setup = this.buildGLState();
+    this.glassProgram = setup.glassProgram;
+    this.blurProgram = setup.blurProgram;
+    this.glassUniforms = setup.glassUniforms;
+    this.blurUniforms = setup.blurUniforms;
+    this.vbo = setup.vbo;
+
+    this.startTime = performance.now();
+
+    // OffscreenCanvas exposes context-loss events on the canvas itself
+    // (not on the GL context). Listen for both directions.
+    this.offscreen.addEventListener(
+      "webglcontextlost",
+      this.handleContextLost as EventListener,
+      { passive: false },
+    );
+    this.offscreen.addEventListener(
+      "webglcontextrestored",
+      this.handleContextRestored as EventListener,
+    );
+  }
+
+  /** (Re)build the GL programs, uniform caches, VBO, and pipeline
+   *  state. Pure function over `this.gl`; called from constructor and
+   *  context-restored. Returns the new resources without writing them
+   *  to the instance, so the caller controls assignment ordering. */
+  private buildGLState(): {
+    glassProgram: WebGLProgram;
+    blurProgram: WebGLProgram;
+    glassUniforms: UniformMap;
+    blurUniforms: UniformMap;
+    vbo: WebGLBuffer;
+  } {
+    const gl = this.gl;
+    const glassProgram = compileProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER);
+    const blurProgram = compileProgram(gl, BLUR_VERTEX, BLUR_FRAGMENT);
 
     // Cache uniform locations once per program link. render() is then a
     // straight-line hot path with no string lookups per frame.
-    this.glassUniforms = lookupUniforms(gl, this.glassProgram, [
+    const glassUniforms = lookupUniforms(gl, glassProgram, [
       "u_tex",
       "u_lightTex",
       "u_resolution",
@@ -161,7 +209,7 @@ export class SharedRenderer {
       "u_saturation",
       "u_brightness",
     ]);
-    this.blurUniforms = lookupUniforms(gl, this.blurProgram, [
+    const blurUniforms = lookupUniforms(gl, blurProgram, [
       "u_tex",
       "u_direction",
       "u_radius",
@@ -172,8 +220,7 @@ export class SharedRenderer {
     // straight through; per-lens positioning is via gl.viewport.
     const vbo = gl.createBuffer();
     if (!vbo) throw new Error("@glazelab/core: gl.createBuffer returned null");
-    this.vbo = vbo;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
@@ -185,18 +232,103 @@ export class SharedRenderer {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-    this.startTime = performance.now();
+    return { glassProgram, blurProgram, glassUniforms, blurUniforms, vbo };
   }
+
+  /* ------------------------------------------------------------------------ */
+  /* Context loss / restored                                                  */
+  /* ------------------------------------------------------------------------ */
+
+  /** Browsers throw away GL resources when the context is lost (driver
+   *  restart, GPU memory pressure, OS sleep, tab switch on some Android
+   *  devices). preventDefault tells the browser we want a restored
+   *  event when GL becomes available again. Without it, the canvas
+   *  permanently dies. Design §3.3, §M12. */
+  private handleContextLost = (e: Event): void => {
+    e.preventDefault();
+    this.suspended = true;
+    this.cancelTick();
+    // All GL resources are now stale. Per-lens GL resources are re-
+    // allocated on context restore. The lens's backdropSource (a JS
+    // image, not a GL object) is preserved for re-upload then.
+  };
+
+  /** Re-allocate everything: programs, VBO, per-lens FBO textures
+   *  and backdrop textures. Resume rAF afterward. */
+  private handleContextRestored = (): void => {
+    if (this.destroyed) return;
+    const setup = this.buildGLState();
+    this.glassProgram = setup.glassProgram;
+    this.blurProgram = setup.blurProgram;
+    this.glassUniforms = setup.glassUniforms;
+    this.blurUniforms = setup.blurUniforms;
+    this.vbo = setup.vbo;
+
+    // Each lens needs its FBO + texture allocations remade. The lens's
+    // backdropSource (the original HTMLImageElement / HTMLCanvasElement)
+    // survives context loss — re-upload it.
+    for (const lens of this.lenses.values()) {
+      lens.glResources = createLensGLResources(this.gl);
+      if (lens.backdropSource) {
+        this.uploadBackdrop(lens, lens.backdropSource);
+      }
+    }
+
+    this.suspended = false;
+    this.scheduleTick();
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Sticky / fixed lens scroll handling                                      */
+  /* ------------------------------------------------------------------------ */
+
+  /** Single shared scroll listener. Attaches when the first sticky/
+   *  fixed lens registers, detaches when the last one unregisters.
+   *  Marks affected lenses dirty + schedules a tick; the tick reads
+   *  fresh getBoundingClientRect for each. Capture phase + passive
+   *  so we run before parent scroll handlers can stopPropagation. */
+  private scrollListenerAttached = false;
+
+  private ensureScrollListener(): void {
+    if (this.scrollListenerAttached) return;
+    this.scrollListenerAttached = true;
+    window.addEventListener("scroll", this.handleScroll, {
+      passive: true,
+      capture: true,
+    });
+  }
+
+  private detachScrollListener(): void {
+    if (!this.scrollListenerAttached) return;
+    this.scrollListenerAttached = false;
+    window.removeEventListener("scroll", this.handleScroll, true);
+  }
+
+  private handleScroll = (): void => {
+    // Just kick a tick. The render loop reads fresh rects for sticky/
+    // fixed lenses each frame regardless, but a tick may not be
+    // pending if all lenses were idle.
+    this.scheduleTick();
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Lens registration                                                        */
+  /* ------------------------------------------------------------------------ */
 
   /** Register a lens for per-frame rendering. Idempotent. Allocates
    *  per-lens GL resources (texture + FBOs); pairs with unregisterLens
-   *  which frees them. */
+   *  which frees them. Tracks sticky/fixed lens count to manage the
+   *  shared scroll listener. */
   registerLens(lens: Lens): void {
     if (this.destroyed) return;
     if (lens.glResources === null) {
       lens.glResources = createLensGLResources(this.gl);
     }
     this.lenses.set(lens.id, lens);
+    if (lens.needsScrollUpdate) {
+      this.scrollLensCount++;
+      this.ensureScrollListener();
+    }
     this.scheduleTick();
   }
 
@@ -206,6 +338,10 @@ export class SharedRenderer {
     if (lens && lens.glResources) {
       disposeLensGLResources(this.gl, lens.glResources);
       lens.glResources = null;
+    }
+    if (lens && lens.needsScrollUpdate) {
+      this.scrollLensCount = Math.max(0, this.scrollLensCount - 1);
+      if (this.scrollLensCount === 0) this.detachScrollListener();
     }
     this.lenses.delete(id);
     if (this.lenses.size === 0) this.cancelTick();
@@ -258,6 +394,17 @@ export class SharedRenderer {
     if (this.destroyed) return;
     this.destroyed = true;
     this.cancelTick();
+    this.detachScrollListener();
+    // Detach context-loss listeners so they don't fire on the
+    // about-to-be-discarded canvas.
+    this.offscreen.removeEventListener(
+      "webglcontextlost",
+      this.handleContextLost as EventListener,
+    );
+    this.offscreen.removeEventListener(
+      "webglcontextrestored",
+      this.handleContextRestored as EventListener,
+    );
     // Free per-lens resources before the context goes away.
     for (const lens of this.lenses.values()) {
       if (lens.glResources) {
@@ -266,6 +413,7 @@ export class SharedRenderer {
       }
     }
     this.lenses.clear();
+    this.scrollLensCount = 0;
     // Programs first (their attached shaders get freed).
     this.gl.deleteProgram(this.glassProgram);
     this.gl.deleteProgram(this.blurProgram);
@@ -295,15 +443,23 @@ export class SharedRenderer {
 
   private tick = (): void => {
     this.rafId = null;
-    if (this.destroyed || this.lenses.size === 0) return;
+    if (this.destroyed || this.suspended || this.lenses.size === 0) return;
 
     for (const lens of this.lenses.values()) {
       if (lens.destroyed) continue;
+      // Sticky/fixed lenses change screen position during scroll without
+      // firing ResizeObserver. Re-read their rect each frame they tick.
+      // Cheap (~0.05ms per call). Static-positioned lenses keep their
+      // ResizeObserver-fed rect.
+      if (lens.needsScrollUpdate) {
+        const r = lens.host.getBoundingClientRect();
+        lens.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+      }
       this.renderLens(lens);
     }
 
-    // Schedule the next tick. Sub-task 3d adds visibility / dirty-flag
-    // gating so we only tick when something actually changed; for 3b
+    // Schedule the next tick. Sub-task 7 adds visibility / dirty-flag
+    // gating so we only tick when something actually changed; for now
     // we tick continuously while any lens is registered.
     this.scheduleTick();
   };
