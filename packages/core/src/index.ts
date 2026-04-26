@@ -5,18 +5,20 @@
  * without Mode C. For Mode C (DOM-subtree rasterization), import from
  * "@glazelab/core/full" instead.
  *
- * NOTE — sub-task 2 of Phase 1: this entry currently re-exports the
- * full unchanged playground surface (types, uniform mapper, presets,
- * renderer class). Sub-task 3 onward refines this into the §6 public
- * API: createGlass / GlassHandle / presets / isSupported. The internal
- * symbols (WebGLGlassRenderer, raw uniforms, etc.) become package-
- * internal at that point. For now they're public so the playground can
- * keep dogfooding the same API while the rebuild happens.
+ * SUB-TASK 3a: adds isSupported() and the internal SharedRenderer
+ * singleton (lifecycle + shader pre-warm). The full createGlass / Glass-
+ * Handle public surface lands in 3b. Legacy types + the old WebGL-
+ * GlassRenderer class continue to re-export so the playground keeps
+ * dogfooding the same API during the rebuild; cleaned up in Phase 2.
  */
 
+/* Public — new (sub-task 3+) */
+export { isSupported } from "./is-supported";
+
+/* Legacy — kept until Phase 2 migrates the playground onto createGlass */
 export * from "./types";
 export * from "./renderer";
 export * from "./uniforms";
 export * from "./presets";
 
-export const __version = "0.0.0-extract";
+export const __version = "0.0.0-rebuild-3a";
