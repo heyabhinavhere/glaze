@@ -29,6 +29,12 @@ import {
   FRAGMENT_SHADER,
   VERTEX_SHADER,
 } from "../shader";
+import type { Lens } from "./lens";
+
+/** Devicepixel cap. Design §M21 — capped at 2× even on 3× displays;
+ *  the slight quality reduction is imperceptible, the memory savings
+ *  are 2.25×. Per-frame allocation cost is also smaller. */
+const MAX_DPR = 2;
 
 /** Grace window before destroying the singleton when refcount hits 0.
  *  Tuned so Strict-Mode mount→unmount→mount (typically <100ms) and
@@ -47,6 +53,12 @@ export class SharedRenderer {
   private readonly glassProgram: WebGLProgram;
   /** Compiled blur program (separable Gaussian for the body-blur pipeline). */
   private readonly blurProgram: WebGLProgram;
+
+  /** Registered lenses. Keyed by lens.id. */
+  private readonly lenses = new Map<number, Lens>();
+
+  /** Active rAF id, or null when no tick is pending. */
+  private rafId: number | null = null;
 
   /** True once destroy() has run; subsequent calls are no-ops. */
   private destroyed = false;
@@ -80,10 +92,25 @@ export class SharedRenderer {
     this.blurProgram = compileProgram(gl, BLUR_VERTEX, BLUR_FRAGMENT);
   }
 
+  /** Register a lens for per-frame rendering. Idempotent. */
+  registerLens(lens: Lens): void {
+    if (this.destroyed) return;
+    this.lenses.set(lens.id, lens);
+    this.scheduleTick();
+  }
+
+  /** Unregister a lens. Idempotent. */
+  unregisterLens(id: number): void {
+    this.lenses.delete(id);
+    if (this.lenses.size === 0) this.cancelTick();
+  }
+
   /** Tear down all GL resources. Idempotent — safe to call multiple times. */
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.cancelTick();
+    this.lenses.clear();
     // Programs first (their attached shaders get freed).
     this.gl.deleteProgram(this.glassProgram);
     this.gl.deleteProgram(this.blurProgram);
@@ -91,6 +118,79 @@ export class SharedRenderer {
     // immediately rather than waiting on GC.
     const lose = this.gl.getExtension("WEBGL_lose_context");
     if (lose) lose.loseContext();
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Render loop                                                              */
+  /* ------------------------------------------------------------------------ */
+
+  private scheduleTick(): void {
+    if (this.rafId !== null) return;
+    if (this.destroyed) return;
+    this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  private cancelTick(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+
+  private tick = (): void => {
+    this.rafId = null;
+    if (this.destroyed || this.lenses.size === 0) return;
+
+    for (const lens of this.lenses.values()) {
+      if (lens.destroyed) continue;
+      this.renderLens(lens);
+    }
+
+    // Schedule the next tick. Sub-task 3d adds visibility / dirty-flag
+    // gating so we only tick when something actually changed; for 3b
+    // we tick continuously while any lens is registered.
+    this.scheduleTick();
+  };
+
+  /** Render a single lens's content. Sub-task 3b: test pattern (a soft
+   *  translucent gradient) — exercises the full offscreen → bitmap →
+   *  per-lens-canvas blit pipeline. Sub-task 3c replaces the test
+   *  pattern with the real glass shader. */
+  private renderLens(lens: Lens): void {
+    const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
+    const w = Math.max(1, Math.round(lens.rect.w * dpr));
+    const h = Math.max(1, Math.round(lens.rect.h * dpr));
+
+    // Resize the shared offscreen canvas to fit this lens. This also
+    // resizes the GL drawing buffer; viewport tracks the buffer.
+    if (this.offscreen.width !== w) this.offscreen.width = w;
+    if (this.offscreen.height !== h) this.offscreen.height = h;
+
+    const gl = this.gl;
+    gl.viewport(0, 0, w, h);
+
+    /* ----- 3b test pattern ---------------------------------------------
+     * Clear with a translucent vertical gradient by drawing two clears
+     * at half-height each. (Real GL gradient needs a small program;
+     * we'll have one in 3c, so for 3b we keep it shader-less and just
+     * exercise glClear / blit.) Result: two-tone semi-transparent fill,
+     * visually proves the offscreen → bitmap → blit path. */
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(0, h / 2, w, h / 2);
+    gl.clearColor(1, 1, 1, 0.18);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.scissor(0, 0, w, h / 2);
+    gl.clearColor(1, 1, 1, 0.06);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.SCISSOR_TEST);
+
+    // Take ownership of the offscreen pixels — this is the cheap part
+    // (just transferring a reference, not copying pixels). After this,
+    // the offscreen is blanked for the next lens.
+    const bitmap = this.offscreen.transferToImageBitmap();
+
+    // Blit to the lens's visible 2D canvas.
+    lens.blit(bitmap);
   }
 }
 
