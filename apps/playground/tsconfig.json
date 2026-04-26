@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./*"]
+    },
+    // Override base: noUncheckedIndexedAccess is too strict for the
+    // existing playground lib/* code (caught existing index-out-of-
+    // bounds patterns that aren't bugs). Once Phase 1 sub-task 2
+    // moves lib/* into packages/core/, the new code is written under
+    // the stricter setting; the playground stops needing this override
+    // when it imports from @glazelab/core instead of local lib/.
+    "noUncheckedIndexedAccess": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
