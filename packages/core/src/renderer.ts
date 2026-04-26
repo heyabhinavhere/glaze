@@ -194,6 +194,14 @@ export class WebGLGlassRenderer {
       "u_chromatic",
       "u_grain",
       "u_time",
+      // Sub-task 4 added u_saturation/u_brightness to the shader. The
+      // legacy renderer doesn't expose them as user-facing controls
+      // (they're a new-architecture feature), but the shader requires
+      // them — without setting them, GLSL defaults to 0 and the
+      // applyTonal pass produces pure black. Set to neutral (1.0)
+      // each frame so playback is identical to pre-sub-task-4 behavior.
+      "u_saturation",
+      "u_brightness",
     ];
     for (const n of names) {
       this.uniformLocs[n] = gl.getUniformLocation(prog, n);
@@ -497,6 +505,12 @@ export class WebGLGlassRenderer {
       this.uniformLocs.u_time,
       (performance.now() - this.startTime) / 1000,
     );
+    // Neutral saturation + brightness — see uniform-cache comment. The
+    // legacy renderer pre-dates the applyTonal pass, so it sets these
+    // every frame to the identity values to keep the shader's output
+    // identical to pre-sub-task-4 behavior.
+    gl.uniform1f(this.uniformLocs.u_saturation, 1.0);
+    gl.uniform1f(this.uniformLocs.u_brightness, 1.0);
 
     const canvasRect = rect;
     for (const lens of this.lenses) {
