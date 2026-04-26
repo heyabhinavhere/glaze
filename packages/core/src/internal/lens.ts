@@ -42,10 +42,31 @@ export class Lens {
    *  decide if the visible canvas needs resizing on the next frame. */
   lastBackingSize: { w: number; h: number } = { w: 0, h: 0 };
 
-  /** Resolved backdrop image, ready for GL upload. Set by the renderer
-   *  after asynchronous decode completes. Until set, the lens is gated
-   *  off — renderLens skips lenses without a resolved source. */
-  backdropSource: HTMLImageElement | HTMLCanvasElement | null = null;
+  /** Resolved backdrop, ready for GL upload. For Mode A (static image)
+   *  this is set once after async decode. For Mode B (live element) this
+   *  is the source element itself; the renderer re-uploads from it
+   *  per frame (video) or per RVF callback (canvas). */
+  backdropSource:
+    | HTMLImageElement
+    | HTMLCanvasElement
+    | HTMLVideoElement
+    | null = null;
+
+  /** Backdrop classification — drives upload cadence.
+   *
+   *  - "static":      one-shot upload (image URL or HTMLImageElement)
+   *  - "live-video":  re-upload on requestVideoFrameCallback fires
+   *  - "live-canvas": re-upload every render frame (no native event) */
+  backdropKind: "static" | "live-video" | "live-canvas" | null = null;
+
+  /** Set by the video frame callback when a new frame is decoded.
+   *  Cleared by the renderer after re-upload. Live-canvas doesn't
+   *  use this — it re-uploads unconditionally each tick. */
+  needsTextureRefresh = false;
+
+  /** Active requestVideoFrameCallback id. Tracked so we can cancel
+   *  on destroy and avoid leaking the callback. */
+  videoFrameCallbackId: number | null = null;
 
   /** Per-lens GL resources (texture + FBOs + dirty flags). Set by the
    *  renderer when the lens registers; freed when it unregisters. */
@@ -224,6 +245,20 @@ export class Lens {
     if (this.destroyed) return;
     this.destroyed = true;
     this.generation++;
+    // Cancel any active video-frame callback so it doesn't fire after
+    // teardown and try to set state on a dead lens.
+    if (
+      this.videoFrameCallbackId !== null &&
+      this.backdropSource instanceof HTMLVideoElement
+    ) {
+      const v = this.backdropSource as HTMLVideoElement & {
+        cancelVideoFrameCallback?: (id: number) => void;
+      };
+      if (typeof v.cancelVideoFrameCallback === "function") {
+        v.cancelVideoFrameCallback(this.videoFrameCallbackId);
+      }
+      this.videoFrameCallbackId = null;
+    }
     this.resizeObserver.disconnect();
     this.canvas.remove();
     this.host.removeAttribute("data-glaze-host");

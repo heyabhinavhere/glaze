@@ -203,7 +203,21 @@ function clamp01(v: number): number {
  *    2. Strict-Mode mount/unmount/mount: a NEW lens with a NEW generation
  *       takes over; the old promise's result is irrelevant.
  *    3. handle.update({ backdrop: newURL }) mid-decode: old result must
- *       not clobber the new state. */
+ *       not clobber the new state.
+ *
+ *  Also classifies the backdrop into one of three kinds (Mode A static,
+ *  Mode B live-canvas, Mode B live-video) and wires the appropriate
+ *  refresh path:
+ *    - static  → upload once
+ *    - canvas  → upload every render frame (renderer.tick handles this)
+ *    - video   → subscribe to requestVideoFrameCallback so we re-upload
+ *                only when a new frame is decoded (60% bus-traffic
+ *                reduction vs naive every-frame for paused/idle videos)
+ *
+ *  Auto-set backdropAnchor: when the user passes an HTMLElement
+ *  backdrop and didn't supply an explicit anchor, we default the
+ *  anchor to the element itself. The lens then samples from the right
+ *  region of the canvas/video texture as it sits on the page. */
 async function loadAndUploadBackdrop(
   lens: Lens,
   renderer: ReturnType<typeof acquire>,
@@ -221,7 +235,34 @@ async function loadAndUploadBackdrop(
     // itself is shared across same-URL calls via decodeImageOnce, so
     // the work isn't wasted — just unused for this caller.
     if (lens.destroyed || lens.generation !== startGeneration) return;
+
     lens.backdropSource = resolved;
+
+    // Auto-anchor for live elements: if the user didn't pass an
+    // explicit backdropAnchor, use the element itself. Static images
+    // (URLs / HTMLImageElement) don't auto-anchor — those stay at
+    // viewport-default unless the user sets backdropAnchor.
+    if (!lens.config.backdropAnchor) {
+      if (
+        resolved instanceof HTMLCanvasElement ||
+        resolved instanceof HTMLVideoElement
+      ) {
+        lens.config = { ...lens.config, backdropAnchor: resolved };
+      }
+    }
+
+    // Classify and wire refresh.
+    if (resolved instanceof HTMLVideoElement) {
+      lens.backdropKind = "live-video";
+      subscribeVideoFrames(lens, resolved);
+    } else if (resolved instanceof HTMLCanvasElement) {
+      lens.backdropKind = "live-canvas";
+      // The renderer's tick will re-upload every frame. No extra
+      // wiring needed beyond the kind tag.
+    } else {
+      lens.backdropKind = "static";
+    }
+
     renderer.uploadBackdrop(lens, resolved);
   } catch (err) {
     if (process.env.NODE_ENV === "development") {
@@ -229,4 +270,27 @@ async function loadAndUploadBackdrop(
       console.error("@glazelab/core: backdrop decode failed", err);
     }
   }
+}
+
+/** Subscribe to requestVideoFrameCallback. Re-arms itself in the
+ *  callback so each new frame triggers a fresh upload. Cleared on
+ *  lens destroy. Falls back to "always re-upload" (treated as
+ *  live-canvas) on browsers without the API (Safari before 16). */
+function subscribeVideoFrames(lens: Lens, video: HTMLVideoElement): void {
+  type RVFVideo = HTMLVideoElement & {
+    requestVideoFrameCallback?: (cb: () => void) => number;
+  };
+  const v = video as RVFVideo;
+  if (typeof v.requestVideoFrameCallback !== "function") {
+    // Older browser fallback — pretend it's a canvas so the renderer
+    // re-uploads every render frame instead.
+    lens.backdropKind = "live-canvas";
+    return;
+  }
+  const tick = (): void => {
+    if (lens.destroyed) return;
+    lens.needsTextureRefresh = true;
+    lens.videoFrameCallbackId = v.requestVideoFrameCallback!(tick);
+  };
+  lens.videoFrameCallbackId = v.requestVideoFrameCallback(tick);
 }

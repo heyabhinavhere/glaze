@@ -49,12 +49,16 @@ export function decodeImageOnce(src: string): Promise<HTMLImageElement> {
   return promise;
 }
 
-/** Resolve a backdrop config value to a usable image source. For 3c only
- *  string and HTMLImageElement are supported; other types throw a clear
- *  dev-mode error and resolve to a transparent 1×1 in production. */
+/** Resolve a backdrop config value to a usable image source.
+ *
+ *  - string: decode the image at that URL (Promise-cached).
+ *  - HTMLImageElement: await decode if not already loaded.
+ *  - HTMLCanvasElement: return as-is (renderer re-uploads each frame).
+ *  - HTMLVideoElement: await first frame ready, then return for the
+ *    renderer to subscribe to requestVideoFrameCallback. */
 export async function resolveBackdrop(
   source: string | HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
-): Promise<HTMLImageElement | HTMLCanvasElement> {
+): Promise<HTMLImageElement | HTMLCanvasElement | HTMLVideoElement> {
   if (typeof source === "string") {
     return decodeImageOnce(source);
   }
@@ -81,14 +85,32 @@ export async function resolveBackdrop(
   if (source instanceof HTMLCanvasElement) {
     return source;
   }
-  // Mode B (video) lands in sub-task 5; for 3c throw helpfully in dev.
-  if (process.env.NODE_ENV === "development") {
-    throw new Error(
-      "@glazelab/core: HTMLVideoElement backdrop requires Mode B (sub-task 5). " +
-        "For now, pass a static image URL or HTMLImageElement.",
-    );
+  if (source instanceof HTMLVideoElement) {
+    // Wait for the video to have its first frame available — readyState
+    // ≥ HAVE_CURRENT_DATA (2) means there's something to upload. Lower
+    // states would either upload garbage (HAVE_NOTHING) or work in
+    // some browsers but not others (HAVE_METADATA).
+    if (source.readyState < 2) {
+      await new Promise<void>((resolve, reject) => {
+        const onReady = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = () => {
+          cleanup();
+          reject(new Error("@glazelab/core: HTMLVideoElement failed to load"));
+        };
+        const cleanup = () => {
+          source.removeEventListener("loadeddata", onReady);
+          source.removeEventListener("error", onError);
+        };
+        source.addEventListener("loadeddata", onReady);
+        source.addEventListener("error", onError);
+      });
+    }
+    return source;
   }
-  // Production: return a placeholder that won't crash the pipeline.
+  // Unknown type: never crash the consumer's app.
   return makePlaceholderImage();
 }
 
