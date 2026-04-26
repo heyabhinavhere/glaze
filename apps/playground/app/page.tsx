@@ -20,15 +20,13 @@ import {
   combinedShadowCss,
   glassConfigToCSS,
   uniformToUser,
-} from "@/lib/glass-engine";
-import { defaultConfig } from "@/lib/presets";
-import { toVanillaCSS } from "@/lib/export-css";
-import { GlassCanvas } from "@/components/GlassCanvas";
-import {
+  defaultConfig,
   type GlassAdvanced,
   type GlassConfig,
   type GlassShaderUniforms,
-} from "@/lib/types";
+} from "@glazelab/core";
+import { toVanillaCSS } from "@/lib/export-css";
+import { GlassCanvas } from "@/components/GlassCanvas";
 import { PillSlider } from "@/components/ui/PillSlider";
 import { ColorPill } from "@/components/ui/ColorPill";
 import { TogglePill } from "@/components/ui/TogglePill";

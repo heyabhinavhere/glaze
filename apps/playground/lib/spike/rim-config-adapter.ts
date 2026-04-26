@@ -1,4 +1,4 @@
-import type { GlassUniforms } from "@/lib/webgl-renderer";
+import type { GlassUniforms } from "@glazelab/core";
 import type { RimConfig } from "./rim-config";
 
 /**

@@ -6,7 +6,7 @@ import {
   WebGLGlassRenderer,
   type GlassLens,
   type GlassUniforms,
-} from "@/lib/webgl-renderer";
+} from "@glazelab/core";
 
 /* ---- Module-level decode dedup ------------------------------------------
  * One in-flight decode Promise per URL, shared across the preload effect,

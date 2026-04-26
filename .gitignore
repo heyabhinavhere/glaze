@@ -47,3 +47,4 @@ next-env.d.ts
 
 # raw source images — not used by the app, kept locally for reference only
 /Images/
+.claude/

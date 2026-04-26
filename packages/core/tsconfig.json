@@ -7,7 +7,13 @@
     "sourceMap": true,
     "rootDir": "./src",
     "noEmit": true,
-    "incremental": false
+    "incremental": false,
+    // Override base — sub-task 2 only. The relocated renderer/uniforms
+    // code wasn't written under noUncheckedIndexedAccess; flipping it
+    // on now would mean churning ~30 indexed-access callsites that
+    // sub-task 3 is going to rewrite from scratch anyway. Re-enabled
+    // in sub-task 3 when the new renderer lands.
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
