@@ -30,11 +30,41 @@ import {
   VERTEX_SHADER,
 } from "../shader";
 import type { Lens } from "./lens";
+import {
+  createLensGLResources,
+  disposeLensGLResources,
+  ensureFBOTextures,
+  type LensGLResources,
+} from "./lens-gl";
 
 /** Devicepixel cap. Design §M21 — capped at 2× even on 3× displays;
  *  the slight quality reduction is imperceptible, the memory savings
  *  are 2.25×. Per-frame allocation cost is also smaller. */
 const MAX_DPR = 2;
+
+/** Per-pass blur radius cap. Single huge radii (40px+) undersample —
+ *  the kernel ends up with 5–8px tap spacing, aliasing on JPEG block
+ *  artifacts and high-frequency texture detail (visible regular dot
+ *  pattern). Chaining N passes at smaller radii sums in quadrature:
+ *    sigma_total = sqrt(N) * sigma_per_pass
+ *  so perPass = total / sqrt(N). 12px per pass keeps every pass
+ *  densely sampled. Imported verbatim from the legacy renderer's
+ *  battle-tested constants. */
+const PER_PASS_MAX = 12;
+
+/** Fixed soft blur radius for the rim displacement source. Single pass
+ *  is fine because 6px is well within the kernel's dense sampling
+ *  range — no aliasing risk. The rim ALWAYS reads from this softer
+ *  blur regardless of body frost so the rim character stays soft
+ *  even when frost=0 (Figma's behavior). */
+const LIGHT_BLUR_RADIUS_PX = 6;
+
+/** Maximum body-blur radius in pixels at frost=1.0. The shader's
+ *  u_frost uniform 0–1 maps to 0–40px Gaussian. */
+const MAX_BODY_BLUR_PX = 40;
+
+/** Uniform locations we look up once per program-link. */
+type UniformMap = Record<string, WebGLUniformLocation | null>;
 
 /** Grace window before destroying the singleton when refcount hits 0.
  *  Tuned so Strict-Mode mount→unmount→mount (typically <100ms) and
@@ -53,6 +83,20 @@ export class SharedRenderer {
   private readonly glassProgram: WebGLProgram;
   /** Compiled blur program (separable Gaussian for the body-blur pipeline). */
   private readonly blurProgram: WebGLProgram;
+
+  /** Cached uniform locations for the glass program. */
+  private readonly glassUniforms: UniformMap;
+  /** Cached uniform locations for the blur program. */
+  private readonly blurUniforms: UniformMap;
+
+  /** Shared full-screen quad VBO. The same six vertices serve every
+   *  draw call; per-lens viewport positioning happens via gl.viewport. */
+  private readonly vbo: WebGLBuffer;
+
+  /** Performance-API timestamp at construction. Drives the u_time
+   *  uniform for any time-dependent shader effects (currently none in
+   *  active use, but the uniform is wired so future passes can use it). */
+  private readonly startTime: number;
 
   /** Registered lenses. Keyed by lens.id. */
   private readonly lenses = new Map<number, Lens>();
@@ -90,19 +134,121 @@ export class SharedRenderer {
 
     this.glassProgram = compileProgram(gl, VERTEX_SHADER, FRAGMENT_SHADER);
     this.blurProgram = compileProgram(gl, BLUR_VERTEX, BLUR_FRAGMENT);
+
+    // Cache uniform locations once per program link. render() is then a
+    // straight-line hot path with no string lookups per frame.
+    this.glassUniforms = lookupUniforms(gl, this.glassProgram, [
+      "u_tex",
+      "u_lightTex",
+      "u_resolution",
+      "u_textureResolution",
+      "u_bounds",
+      "u_radius",
+      "u_refraction",
+      "u_bevelDepth",
+      "u_bevelWidth",
+      "u_bendZone",
+      "u_frost",
+      "u_lightAngle",
+      "u_lightIntensity",
+      "u_specularSize",
+      "u_specularOpacity",
+      "u_bevelHighlight",
+      "u_tint",
+      "u_chromatic",
+      "u_grain",
+      "u_time",
+    ]);
+    this.blurUniforms = lookupUniforms(gl, this.blurProgram, [
+      "u_tex",
+      "u_direction",
+      "u_radius",
+    ]);
+
+    // Full-viewport quad — six vertices forming two triangles covering
+    // [-1, 1] in clip space. The vertex shader passes a_position
+    // straight through; per-lens positioning is via gl.viewport.
+    const vbo = gl.createBuffer();
+    if (!vbo) throw new Error("@glazelab/core: gl.createBuffer returned null");
+    this.vbo = vbo;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+      gl.STATIC_DRAW,
+    );
+
+    // Premultiplied-alpha blending — design §M11. Avoids dark fringes
+    // on translucent backgrounds.
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    this.startTime = performance.now();
   }
 
-  /** Register a lens for per-frame rendering. Idempotent. */
+  /** Register a lens for per-frame rendering. Idempotent. Allocates
+   *  per-lens GL resources (texture + FBOs); pairs with unregisterLens
+   *  which frees them. */
   registerLens(lens: Lens): void {
     if (this.destroyed) return;
+    if (lens.glResources === null) {
+      lens.glResources = createLensGLResources(this.gl);
+    }
     this.lenses.set(lens.id, lens);
     this.scheduleTick();
   }
 
-  /** Unregister a lens. Idempotent. */
+  /** Unregister a lens. Frees its GL resources. Idempotent. */
   unregisterLens(id: number): void {
+    const lens = this.lenses.get(id);
+    if (lens && lens.glResources) {
+      disposeLensGLResources(this.gl, lens.glResources);
+      lens.glResources = null;
+    }
     this.lenses.delete(id);
     if (this.lenses.size === 0) this.cancelTick();
+  }
+
+  /** Upload an image / canvas as a lens's backdrop texture. Marks the
+   *  lens's blur layers dirty so the next render rebuilds them. */
+  uploadBackdrop(
+    lens: Lens,
+    source: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
+  ): void {
+    if (this.destroyed) return;
+    if (!lens.glResources) return;
+    const gl = this.gl;
+    const res = lens.glResources;
+
+    if (res.texture === null) {
+      res.texture = gl.createTexture();
+    }
+    gl.bindTexture(gl.TEXTURE_2D, res.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    // Don't pre-multiply on upload — the shader does premultiplication
+    // at the output stage to match the §M11 premultiplied-alpha policy
+    // throughout the pipeline.
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      source as TexImageSource,
+    );
+
+    res.textureW =
+      "width" in source ? (source as { width: number }).width : 0;
+    res.textureH =
+      "height" in source ? (source as { height: number }).height : 0;
+    res.bodyBlurDirty = true;
+    res.lightBlurDirty = true;
+    res.lastBlurRadius = -1;
   }
 
   /** Tear down all GL resources. Idempotent — safe to call multiple times. */
@@ -110,10 +256,18 @@ export class SharedRenderer {
     if (this.destroyed) return;
     this.destroyed = true;
     this.cancelTick();
+    // Free per-lens resources before the context goes away.
+    for (const lens of this.lenses.values()) {
+      if (lens.glResources) {
+        disposeLensGLResources(this.gl, lens.glResources);
+        lens.glResources = null;
+      }
+    }
     this.lenses.clear();
     // Programs first (their attached shaders get freed).
     this.gl.deleteProgram(this.glassProgram);
     this.gl.deleteProgram(this.blurProgram);
+    this.gl.deleteBuffer(this.vbo);
     // Force the context to lose itself so the browser frees driver memory
     // immediately rather than waiting on GC.
     const lose = this.gl.getExtension("WEBGL_lose_context");
@@ -152,45 +306,234 @@ export class SharedRenderer {
     this.scheduleTick();
   };
 
-  /** Render a single lens's content. Sub-task 3b: test pattern (a soft
-   *  translucent gradient) — exercises the full offscreen → bitmap →
-   *  per-lens-canvas blit pipeline. Sub-task 3c replaces the test
-   *  pattern with the real glass shader. */
+  /** Render a single lens's full glass+rim effect. Pipeline:
+   *
+   *  1. Skip if no backdrop is bound yet (texture is null) — the lens
+   *     stays at its current canvas content (typically blank) until
+   *     the asynchronous decode resolves.
+   *  2. Resize the shared offscreen canvas to the lens's device-pixel
+   *     size and set the GL viewport.
+   *  3. Lazy-allocate the lens's FBO ping-pong textures at backdrop
+   *     resolution (idempotent when the size hasn't changed).
+   *  4. Body blur — multi-pass separable Gaussian, total radius driven
+   *     by config.frost. Skipped when frost ≈ 0 (sharp body).
+   *     Cached by lastBlurRadius so smooth frost animations don't
+   *     re-blur unless the radius moved significantly.
+   *  5. Light blur — fixed 6px single pass, runs once per backdrop
+   *     change. Drives the rim displacement source so rim character
+   *     stays soft regardless of body frost.
+   *  6. Glass+rim shader pass — reads body sample (blurred or sharp)
+   *     + light sample, applies refraction / chromatic / rim lighting
+   *     / specular / tint / grain. Output to the offscreen drawing
+   *     buffer.
+   *  7. transferToImageBitmap → blit to the lens's visible 2D canvas.
+   */
   private renderLens(lens: Lens): void {
+    const res = lens.glResources;
+    if (!res || !res.texture || res.textureW === 0) return;
+
     const dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
     const w = Math.max(1, Math.round(lens.rect.w * dpr));
     const h = Math.max(1, Math.round(lens.rect.h * dpr));
 
-    // Resize the shared offscreen canvas to fit this lens. This also
-    // resizes the GL drawing buffer; viewport tracks the buffer.
+    // Resize the shared offscreen + drawing buffer to fit this lens.
     if (this.offscreen.width !== w) this.offscreen.width = w;
     if (this.offscreen.height !== h) this.offscreen.height = h;
 
     const gl = this.gl;
+
+    // Ensure the FBO ping-pong textures exist at the backdrop's size.
+    ensureFBOTextures(gl, res);
+
+    // ---- Body blur (heavy, frost-driven) ------------------------------
+    const cfg = lens.config;
+    const bodyRadiusPx = cfg.frost * MAX_BODY_BLUR_PX;
+    if (bodyRadiusPx > 0.5) {
+      const radiusChanged = Math.abs(bodyRadiusPx - res.lastBlurRadius) > 0.5;
+      if (res.bodyBlurDirty || radiusChanged) {
+        this.runBodyBlur(res, bodyRadiusPx);
+        res.lastBlurRadius = bodyRadiusPx;
+        res.bodyBlurDirty = false;
+      }
+    }
+
+    // ---- Light blur (fixed soft, drives rim) --------------------------
+    if (res.lightBlurDirty) {
+      this.runLightBlur(res);
+      res.lightBlurDirty = false;
+    }
+
+    // ---- Glass+rim shader pass — output to offscreen drawing buffer ---
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, w, h);
-
-    /* ----- 3b test pattern ---------------------------------------------
-     * Clear with a translucent vertical gradient by drawing two clears
-     * at half-height each. (Real GL gradient needs a small program;
-     * we'll have one in 3c, so for 3b we keep it shader-less and just
-     * exercise glClear / blit.) Result: two-tone semi-transparent fill,
-     * visually proves the offscreen → bitmap → blit path. */
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(0, h / 2, w, h / 2);
-    gl.clearColor(1, 1, 1, 0.18);
+    gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.scissor(0, 0, w, h / 2);
-    gl.clearColor(1, 1, 1, 0.06);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.disable(gl.SCISSOR_TEST);
 
-    // Take ownership of the offscreen pixels — this is the cheap part
-    // (just transferring a reference, not copying pixels). After this,
-    // the offscreen is blanked for the next lens.
+    gl.useProgram(this.glassProgram);
+    this.bindQuad(this.glassProgram);
+
+    // Body sample (texture unit 0) — blurred result when frost > 0,
+    // sharp source when frost ≈ 0. Read at the un-displaced UV inside
+    // the body of the lens (no refraction in the interior).
+    const hasBlur = bodyRadiusPx > 0.5;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, hasBlur ? res.blurTexB : res.texture);
+    gl.uniform1i(this.glassUniforms["u_tex"]!, 0);
+
+    // Light sample (texture unit 1) — always softly blurred. Read at
+    // the displaced UV inside the bend zone for the rim refraction.
+    // Frost-independent so even at frost=0 the rim shows softly-
+    // blurred refracted content (Figma's behavior).
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, res.lightTexB);
+    gl.uniform1i(this.glassUniforms["u_lightTex"]!, 1);
+
+    gl.uniform2f(
+      this.glassUniforms["u_textureResolution"]!,
+      res.textureW,
+      res.textureH,
+    );
+    gl.uniform1f(
+      this.glassUniforms["u_time"]!,
+      (performance.now() - this.startTime) / 1000,
+    );
+    gl.uniform2f(this.glassUniforms["u_resolution"]!, w, h);
+
+    // Sub-task 3c — single lens, single backdrop: lens fills the
+    // texture (bounds = 0,0,1,1). The rim refraction samples just
+    // outside the lens's UV region; CLAMP_TO_EDGE on the texture
+    // handles edge sampling without a hard cutoff. Sub-task 5 adjusts
+    // bounds when the backdrop is the page area and the lens is a
+    // sub-region.
+    gl.uniform4f(this.glassUniforms["u_bounds"]!, 0, 0, 1, 1);
+
+    // Per-lens shader uniforms. radius scaled by DPR so the rounded
+    // corners match physical pixels regardless of display density.
+    gl.uniform1f(this.glassUniforms["u_radius"]!, cfg.radius * dpr);
+    gl.uniform1f(this.glassUniforms["u_refraction"]!, cfg.refraction);
+    gl.uniform1f(this.glassUniforms["u_bevelDepth"]!, cfg.bevelDepth);
+
+    // bevelWidth and bendZone are public-API CSS pixels; the legacy
+    // shader expects fractions of the lens's smaller dimension.
+    // Convert here so the shader can stay shape-agnostic.
+    const minDim = Math.max(1, Math.min(lens.rect.w, lens.rect.h));
+    gl.uniform1f(this.glassUniforms["u_bevelWidth"]!, cfg.bevelWidth / minDim);
+    gl.uniform1f(this.glassUniforms["u_bendZone"]!, cfg.bendZone / minDim);
+
+    gl.uniform1f(this.glassUniforms["u_frost"]!, cfg.frost);
+    gl.uniform1f(this.glassUniforms["u_lightAngle"]!, cfg.lightAngle);
+    gl.uniform1f(
+      this.glassUniforms["u_lightIntensity"]!,
+      cfg.rimIntensity, // public name for the light multiplier
+    );
+    gl.uniform1f(this.glassUniforms["u_specularSize"]!, cfg.specularSize);
+    gl.uniform1f(
+      this.glassUniforms["u_specularOpacity"]!,
+      cfg.specularOpacity,
+    );
+    gl.uniform1f(this.glassUniforms["u_bevelHighlight"]!, cfg.rimIntensity);
+    gl.uniform4f(
+      this.glassUniforms["u_tint"]!,
+      cfg.tint[0],
+      cfg.tint[1],
+      cfg.tint[2],
+      cfg.tint[3],
+    );
+    gl.uniform1f(this.glassUniforms["u_chromatic"]!, cfg.chromatic);
+    gl.uniform1f(this.glassUniforms["u_grain"]!, cfg.grain);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // ---- Transfer to lens's visible 2D canvas -------------------------
     const bitmap = this.offscreen.transferToImageBitmap();
-
-    // Blit to the lens's visible 2D canvas.
     lens.blit(bitmap);
+  }
+
+  /** Multi-pass separable Gaussian on the body texture. Total radius
+   *  achieved by chaining N passes at perPass = total/sqrt(N). */
+  private runBodyBlur(res: LensGLResources, totalRadiusPx: number): void {
+    if (!res.texture) return;
+    const passes = Math.max(1, Math.ceil(totalRadiusPx / PER_PASS_MAX));
+    const perPass = totalRadiusPx / Math.sqrt(passes);
+    let input: WebGLTexture = res.texture;
+    for (let i = 0; i < passes; i++) {
+      this.runBlurPass(res, input, res.blurTexA, res.blurTexB, perPass);
+      input = res.blurTexB;
+    }
+  }
+
+  /** Single-pass soft blur for the rim displacement source. */
+  private runLightBlur(res: LensGLResources): void {
+    if (!res.texture) return;
+    this.runBlurPass(
+      res,
+      res.texture,
+      res.lightTexA,
+      res.lightTexB,
+      LIGHT_BLUR_RADIUS_PX,
+    );
+  }
+
+  /** One H+V Gaussian sweep: input → outA (horizontal) → outB (vertical).
+   *  Pure function over the input texture and the two output textures so
+   *  callers can chain it. */
+  private runBlurPass(
+    res: LensGLResources,
+    input: WebGLTexture,
+    outA: WebGLTexture,
+    outB: WebGLTexture,
+    radiusPx: number,
+  ): void {
+    const gl = this.gl;
+    const w = res.textureW;
+    const h = res.textureH;
+    if (w === 0 || h === 0) return;
+
+    gl.useProgram(this.blurProgram);
+    this.bindQuad(this.blurProgram);
+    gl.viewport(0, 0, w, h);
+    gl.disable(gl.BLEND);
+
+    // Pass 1: horizontal (input → outA)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, res.fbo);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      outA,
+      0,
+    );
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, input);
+    gl.uniform1i(this.blurUniforms["u_tex"]!, 0);
+    gl.uniform2f(this.blurUniforms["u_direction"]!, 1.0 / w, 0);
+    gl.uniform1f(this.blurUniforms["u_radius"]!, radiusPx);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Pass 2: vertical (outA → outB)
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      outB,
+      0,
+    );
+    gl.bindTexture(gl.TEXTURE_2D, outA);
+    gl.uniform2f(this.blurUniforms["u_direction"]!, 0, 1.0 / h);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.enable(gl.BLEND);
+  }
+
+  /** Bind the shared full-screen quad VBO + the program's a_position
+   *  attribute. Called at the start of each program use. */
+  private bindQuad(program: WebGLProgram): void {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    const posLoc = gl.getAttribLocation(program, "a_position");
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
   }
 }
 
@@ -295,6 +638,21 @@ function compileShader(
     );
   }
   return shader;
+}
+
+/** Look up a list of uniform locations once per program-link. Missing
+ *  uniforms (e.g. dropped by GLSL optimizer) get null entries — callers
+ *  must null-check before passing to gl.uniform*. */
+function lookupUniforms(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  names: string[],
+): UniformMap {
+  const out: UniformMap = {};
+  for (const n of names) {
+    out[n] = gl.getUniformLocation(program, n);
+  }
+  return out;
 }
 
 function compileProgram(

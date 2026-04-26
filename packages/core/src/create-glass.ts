@@ -21,6 +21,7 @@ import { Lens } from "./internal/lens";
 import { DEFAULT_LENS_CONFIG } from "./internal/types";
 import { ensurePrewarm } from "./internal/prewarm";
 import { isSupported } from "./is-supported";
+import { resolveBackdrop } from "./internal/backdrop-loader";
 import type { ColorInput, GlassConfigUpdate, GlassHandle } from "./public-types";
 
 /** No-op handle — returned when the runtime can't create a real lens
@@ -94,10 +95,24 @@ export function createGlass(
   // calls (e.g., React StrictMode cleanup that fires twice).
   let destroyed = false;
 
+  // Async backdrop load — when the config provides a backdrop, kick
+  // off the decode and upload to GPU as soon as it's ready. The lens
+  // renders blank until the texture is bound; with the perf-fix
+  // module-level Promise cache (decodeImageOnce) the same URL across
+  // multiple lenses shares one decode. Errors degrade silently in
+  // production (lens stays blank) and surface in dev via console.
+  if (resolved.backdrop !== null) {
+    void loadAndUploadBackdrop(lens, renderer, resolved.backdrop);
+  }
+
   return {
     update(partial) {
       if (destroyed) return;
       lens.applyUpdate(partial);
+      // Backdrop changes through update() trigger a re-load.
+      if (partial.backdrop !== undefined && partial.backdrop !== null) {
+        void loadAndUploadBackdrop(lens, renderer, partial.backdrop);
+      }
     },
     updateUniform(_key, _value) {
       // Sub-task 7 wires the zero-allocation hot path. For 3b, this is
@@ -177,4 +192,30 @@ function parseColorTuple(input: ColorInput): [number, number, number, number] {
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+
+/** Decode + upload a backdrop. Fire-and-forget; if the lens is destroyed
+ *  before the decode resolves, we skip the upload silently. Sub-task 3d
+ *  adds the generation-counter race guard; for 3c we just check
+ *  lens.destroyed at apply-time. */
+async function loadAndUploadBackdrop(
+  lens: Lens,
+  renderer: ReturnType<typeof acquire>,
+  source:
+    | string
+    | HTMLImageElement
+    | HTMLVideoElement
+    | HTMLCanvasElement,
+): Promise<void> {
+  try {
+    const resolved = await resolveBackdrop(source);
+    if (lens.destroyed) return;
+    lens.backdropSource = resolved;
+    renderer.uploadBackdrop(lens, resolved);
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.error("@glazelab/core: backdrop decode failed", err);
+    }
+  }
 }

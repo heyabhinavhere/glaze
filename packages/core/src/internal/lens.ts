@@ -21,6 +21,7 @@
 import type { GlassConfigUpdate, ColorInput } from "../public-types";
 import type { LensConfig } from "./types";
 import { DEFAULT_LENS_CONFIG } from "./types";
+import type { LensGLResources } from "./lens-gl";
 
 let lensIdCounter = 0;
 
@@ -40,6 +41,15 @@ export class Lens {
   /** Backing-store device-pixel size at the last render — used to
    *  decide if the visible canvas needs resizing on the next frame. */
   lastBackingSize: { w: number; h: number } = { w: 0, h: 0 };
+
+  /** Resolved backdrop image, ready for GL upload. Set by the renderer
+   *  after asynchronous decode completes. Until set, the lens is gated
+   *  off — renderLens skips lenses without a resolved source. */
+  backdropSource: HTMLImageElement | HTMLCanvasElement | null = null;
+
+  /** Per-lens GL resources (texture + FBOs + dirty flags). Set by the
+   *  renderer when the lens registers; freed when it unregisters. */
+  glResources: LensGLResources | null = null;
 
   /** True once destroy() has run; subsequent calls are no-ops. */
   destroyed = false;
