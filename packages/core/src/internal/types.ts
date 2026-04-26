@@ -69,8 +69,13 @@ export const DEFAULT_LENS_CONFIG: LensConfig = {
 
   // Body
   frost: 0.36,
-  saturation: 0.5, // playground saturation:20 mapped through ADVANCED_RANGES
-  brightness: 1.6, // playground brightness:80 mapped through ADVANCED_RANGES
+  // Neutral — the legacy playground does NOT actually apply
+  // saturation/brightness in its shader (the playground's
+  // `advanced.saturation: 20` was reserved for future shader work).
+  // Effective shader defaults match playground: neutral on both.
+  // Users can dial them via update() for desaturate/brighten effects.
+  saturation: 1.0,
+  brightness: 1.0,
   tint: [1, 1, 1, 0.1], // white @ 10%
   grain: 0,
 
