@@ -161,6 +161,7 @@ function mergeConfig(partial: GlassConfigUpdate | undefined) {
   if (partial.dropShadow !== undefined) merged.dropShadow = partial.dropShadow;
   if (partial.backdrop !== undefined) merged.backdrop = partial.backdrop;
   if (partial.backdropFrom !== undefined) merged.backdropFrom = partial.backdropFrom;
+  if (partial.backdropAnchor !== undefined) merged.backdropAnchor = partial.backdropAnchor;
   return merged;
 }
 

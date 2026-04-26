@@ -562,19 +562,35 @@ export class SharedRenderer {
     // the lens maps to bounds.x + bounds.w*localU (etc), so the
     // unrefracted body shows the actual content behind the lens.
     //
-    // Sub-task 3c assumption: the backdrop covers the viewport (the
-    // canonical Mode A case — page-background image, full-viewport
-    // canvas, video, etc). Sub-task 5 generalizes for backdrops that
-    // sit at arbitrary parent rects with cover/contain/fill semantics.
-    const vw = window.innerWidth || document.documentElement.clientWidth || w;
-    const vh =
-      window.innerHeight || document.documentElement.clientHeight || h;
+    // Coverage rect (where the backdrop is visually painted on the
+    // page) defaults to the viewport when no anchor is set — the
+    // canonical Mode A page-background-cover case. When an anchor IS
+    // set, we use its getBoundingClientRect — covers Mode A on a
+    // specific <img>, Mode B on a `<canvas>`/`<video>`, etc.
+    let coverageX: number;
+    let coverageY: number;
+    let coverageW: number;
+    let coverageH: number;
+    if (cfg.backdropAnchor) {
+      const r = cfg.backdropAnchor.getBoundingClientRect();
+      coverageX = r.left;
+      coverageY = r.top;
+      coverageW = Math.max(1, r.width);
+      coverageH = Math.max(1, r.height);
+    } else {
+      coverageX = 0;
+      coverageY = 0;
+      coverageW =
+        window.innerWidth || document.documentElement.clientWidth || w;
+      coverageH =
+        window.innerHeight || document.documentElement.clientHeight || h;
+    }
     gl.uniform4f(
       this.glassUniforms["u_bounds"]!,
-      lens.rect.x / vw,
-      lens.rect.y / vh,
-      lens.rect.w / vw,
-      lens.rect.h / vh,
+      (lens.rect.x - coverageX) / coverageW,
+      (lens.rect.y - coverageY) / coverageH,
+      lens.rect.w / coverageW,
+      lens.rect.h / coverageH,
     );
 
     // Per-lens shader uniforms. radius scaled by DPR so the rounded

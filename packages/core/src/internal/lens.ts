@@ -213,6 +213,8 @@ export class Lens {
       this.config = { ...this.config, backdrop: partial.backdrop };
     if (partial.backdropFrom !== undefined)
       this.config = { ...this.config, backdropFrom: partial.backdropFrom };
+    if (partial.backdropAnchor !== undefined)
+      this.config = { ...this.config, backdropAnchor: partial.backdropAnchor };
   }
 
   /** Idempotent. Removes the canvas, disconnects observers, restores
