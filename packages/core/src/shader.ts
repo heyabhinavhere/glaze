@@ -139,6 +139,14 @@ uniform float u_chromatic;            // 0..1 chromatic dispersion
 uniform float u_grain;                // 0..1 grain intensity
 uniform float u_time;                 // seconds
 
+// Backdrop tonal — design §M11 + sub-task 4. Applied to the refracted
+// backdrop sample BEFORE tint so the playground's premium pastel feel
+// (sat ≈ 0.5, brt ≈ 1.6) lands on top of frosted content. saturation
+// 1.0 = neutral, 0.0 = monochrome, 2.5 = oversaturated. brightness
+// 1.0 = neutral, 0 = black, 2.0 = double-bright.
+uniform float u_saturation;
+uniform float u_brightness;
+
 /* -------------------------------------------------------------------------- */
 /* Signed distance field for the rounded rectangle                            */
 /* -------------------------------------------------------------------------- */
@@ -178,6 +186,18 @@ float hash12(vec2 p) {
   p = fract(p * vec2(123.34, 345.45));
   p += dot(p, p + 34.345);
   return fract(p.x * p.y);
+}
+
+/* Saturation + brightness — the "premium pastel" pass that desaturates
+   and lifts the backdrop before the tint composites. ITU-R BT.709
+   luminance weights match how sRGB displays perceive brightness, so
+   desaturation mixes toward perceived gray rather than naive average.
+   Brightness multiplies after — same operation order as CSS filter
+   saturate() brightness(). */
+vec3 applyTonal(vec3 color) {
+  vec3 luma = vec3(dot(color, vec3(0.2126, 0.7152, 0.0722)));
+  vec3 sat = mix(luma, color, u_saturation);
+  return sat * u_brightness;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -286,6 +306,13 @@ void main() {
   float rimMix = 1.0 - smoothstep(0.0, refractZonePx, d_in);
   vec4 refrCol = mix(bodyRef, rimRef, rimMix);
   vec2 texel = 1.0 / u_textureResolution;
+
+  /* ---- 2.5. Backdrop tonal: saturation + brightness ------------------- */
+  // Apply BEFORE tint so the playground's premium pastel feel
+  // (sat ~0.5, brt ~1.6) lands on the refracted backdrop, then the tint
+  // mixes in on top. Matches the legacy CSS filter chain ordering:
+  // backdrop → blur (already done in FBO) → saturate → brightness → tint.
+  refrCol.rgb = applyTonal(refrCol.rgb);
 
   /* ---- 3. Apply tint -------------------------------------------------- */
   // Standard "over" composite: refracted backdrop below, tint on top.

@@ -1,4 +1,4 @@
-import type { ResolvedGlass } from "./types";
+import type { ResolvedGlass } from "@glazelab/core";
 
 /**
  * CSS approximation — this is the EXPORT path, not the live preview.

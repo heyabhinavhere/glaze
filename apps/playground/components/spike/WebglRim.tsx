@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   WebGLGlassRenderer,
   type GlassLens,
-} from "@/lib/webgl-renderer";
+} from "@glazelab/core";
 import type { RimConfig } from "@/lib/spike/rim-config";
 import { rimConfigToUniforms } from "@/lib/spike/rim-config-adapter";
 
