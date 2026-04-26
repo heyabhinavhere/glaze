@@ -158,6 +158,8 @@ export class SharedRenderer {
       "u_chromatic",
       "u_grain",
       "u_time",
+      "u_saturation",
+      "u_brightness",
     ]);
     this.blurUniforms = lookupUniforms(gl, this.blurProgram, [
       "u_tex",
@@ -399,13 +401,25 @@ export class SharedRenderer {
     );
     gl.uniform2f(this.glassUniforms["u_resolution"]!, w, h);
 
-    // Sub-task 3c — single lens, single backdrop: lens fills the
-    // texture (bounds = 0,0,1,1). The rim refraction samples just
-    // outside the lens's UV region; CLAMP_TO_EDGE on the texture
-    // handles edge sampling without a hard cutoff. Sub-task 5 adjusts
-    // bounds when the backdrop is the page area and the lens is a
-    // sub-region.
-    gl.uniform4f(this.glassUniforms["u_bounds"]!, 0, 0, 1, 1);
+    // Lens position in backdrop UV space. The shader uses this to
+    // sample the right region of the backdrop texture: body UV inside
+    // the lens maps to bounds.x + bounds.w*localU (etc), so the
+    // unrefracted body shows the actual content behind the lens.
+    //
+    // Sub-task 3c assumption: the backdrop covers the viewport (the
+    // canonical Mode A case — page-background image, full-viewport
+    // canvas, video, etc). Sub-task 5 generalizes for backdrops that
+    // sit at arbitrary parent rects with cover/contain/fill semantics.
+    const vw = window.innerWidth || document.documentElement.clientWidth || w;
+    const vh =
+      window.innerHeight || document.documentElement.clientHeight || h;
+    gl.uniform4f(
+      this.glassUniforms["u_bounds"]!,
+      lens.rect.x / vw,
+      lens.rect.y / vh,
+      lens.rect.w / vw,
+      lens.rect.h / vh,
+    );
 
     // Per-lens shader uniforms. radius scaled by DPR so the rounded
     // corners match physical pixels regardless of display density.
@@ -441,6 +455,8 @@ export class SharedRenderer {
     );
     gl.uniform1f(this.glassUniforms["u_chromatic"]!, cfg.chromatic);
     gl.uniform1f(this.glassUniforms["u_grain"]!, cfg.grain);
+    gl.uniform1f(this.glassUniforms["u_saturation"]!, cfg.saturation);
+    gl.uniform1f(this.glassUniforms["u_brightness"]!, cfg.brightness);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
