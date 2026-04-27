@@ -103,6 +103,7 @@ export default function TestAutoPage() {
           cover so the lens samples the correctly-positioned region
           of the underlying image texture (not the cropped CSS rect). */}
       <section
+        id="bottom"
         style={{
           position: "relative",
           height: "100vh",
