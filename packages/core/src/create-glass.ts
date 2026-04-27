@@ -23,6 +23,7 @@ import { ensurePrewarm } from "./internal/prewarm";
 import { isSupported } from "./is-supported";
 import { resolveBackdrop } from "./internal/backdrop-loader";
 import { autoDetectBackdrop } from "./internal/auto-detect";
+import { getDOMRasterizer } from "./internal/mode-c";
 import type { ColorInput, GlassConfigUpdate, GlassHandle } from "./public-types";
 
 /** No-op handle — returned when the runtime can't create a real lens
@@ -94,14 +95,25 @@ export function createGlass(
   // provided, walk the host's ancestors to figure out what's behind
   // it. This is the "drop-in glass" UX — `<Glaze>nav</Glaze>` works
   // without an explicit prop. Sub-task 5c.
+  //
+  // Mode C is included as a fallback when the /full entry has
+  // registered a DOM rasterizer. When auto resolves to "C-dom", the
+  // backdrop is null at this point — the async rasterization happens
+  // after lens registration so the lens is alive while we wait.
+  let autoResult: ReturnType<typeof autoDetectBackdrop> | null = null;
   if (resolved.backdrop === null && resolved.backdropFrom === null) {
-    const auto = autoDetectBackdrop(target);
-    if (auto.backdrop !== null) {
-      resolved.backdrop = auto.backdrop;
-      // Honor user's explicit anchor if they set one; otherwise use
-      // the auto-detected anchor.
+    const modeCAvailable = getDOMRasterizer() !== null;
+    autoResult = autoDetectBackdrop(target, modeCAvailable);
+    if (autoResult.backdrop !== null) {
+      resolved.backdrop = autoResult.backdrop;
       if (resolved.backdropAnchor === null) {
-        resolved.backdropAnchor = auto.backdropAnchor;
+        resolved.backdropAnchor = autoResult.backdropAnchor;
+      }
+    } else if (autoResult.mode === "C-dom" && autoResult.domTarget) {
+      // Mode C: anchor set immediately so bounds calc works, backdrop
+      // populated after rasterization completes.
+      if (resolved.backdropAnchor === null) {
+        resolved.backdropAnchor = autoResult.backdropAnchor;
       }
     }
   }
@@ -120,6 +132,11 @@ export function createGlass(
   // single decode across same-URL callers.
   if (resolved.backdrop !== null) {
     void loadAndUploadBackdrop(lens, renderer, resolved.backdrop);
+  } else if (autoResult?.mode === "C-dom" && autoResult.domTarget) {
+    // Mode C async path: invoke the registered rasterizer, upload the
+    // resulting canvas as the backdrop texture. Race-safe via the
+    // lens generation counter (loadAndApplyModeC checks it).
+    void loadAndApplyModeC(lens, renderer, autoResult.domTarget);
   }
 
   return {
@@ -285,6 +302,49 @@ async function loadAndUploadBackdrop(
     if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
       console.error("@glazelab/core: backdrop decode failed", err);
+    }
+  }
+}
+
+/** Mode C async path — invoke the registered DOM rasterizer against
+ *  the target element, upload the resulting canvas as the lens's
+ *  backdrop. Race-safe via the lens generation counter. Skip nodes
+ *  marked with `data-glaze-host` to prevent feedback loops where
+ *  glass-on-page would capture itself. */
+async function loadAndApplyModeC(
+  lens: Lens,
+  renderer: ReturnType<typeof acquire>,
+  target: HTMLElement,
+): Promise<void> {
+  const rasterize = getDOMRasterizer();
+  if (!rasterize) return; // Should not happen — caller already gated on this.
+
+  const startGeneration = lens.generation;
+  try {
+    // Skip every glass host on the page (including this lens's own
+    // host) so the rasterized image doesn't include glass elements.
+    // Without this guard, the captured texture would contain the
+    // lens's own canvas → recursive refraction → flickering.
+    const skipNodes = Array.from(
+      document.querySelectorAll("[data-glaze-host]"),
+    ) as Node[];
+
+    const canvas = await rasterize(target, { skipNodes });
+    if (lens.destroyed || lens.generation !== startGeneration) return;
+    if (!canvas) return;
+
+    lens.backdropSource = canvas;
+    // Mode C is a one-shot rasterization (sub-task 6a). The canvas is
+    // STATIC after we draw to it — no per-frame re-upload needed.
+    // Treat as static. Sub-task 6c's worker version stays static too;
+    // sub-task 6d's capture-tall-once handles re-capture only on
+    // resize / DOM mutation.
+    lens.backdropKind = "static";
+    renderer.uploadBackdrop(lens, canvas);
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.error("@glazelab/core: Mode C rasterization failed", err);
     }
   }
 }

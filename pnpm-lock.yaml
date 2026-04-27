@@ -59,6 +59,10 @@ importers:
         version: 5.9.3
 
   packages/core:
+    dependencies:
+      html2canvas:
+        specifier: ^1.4.1
+        version: 1.4.1
     devDependencies:
       '@size-limit/preset-small-lib':
         specifier: ^11.1.6
