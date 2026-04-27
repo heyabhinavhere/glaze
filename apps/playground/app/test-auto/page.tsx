@@ -98,7 +98,10 @@ export default function TestAutoPage() {
         </div>
       </section>
 
-      {/* Bottom half — explicit <img> ancestor case */}
+      {/* Bottom half — explicit <img> ancestor case with cover-fit.
+          The renderer's painted-rect helper accounts for object-fit:
+          cover so the lens samples the correctly-positioned region
+          of the underlying image texture (not the cropped CSS rect). */}
       <section
         style={{
           position: "relative",
@@ -135,7 +138,7 @@ export default function TestAutoPage() {
             textShadow: "0 1px 8px rgba(0,0,0,0.4)",
           }}
         >
-          Auto: covering &lt;img&gt; sibling
+          Auto: covering &lt;img&gt; sibling (object-fit: cover)
         </div>
       </section>
 

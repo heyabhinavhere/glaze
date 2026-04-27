@@ -36,6 +36,7 @@ import {
   ensureFBOTextures,
   type LensGLResources,
 } from "./lens-gl";
+import { getPaintedRect } from "./painted-rect";
 
 /** Devicepixel cap. Design §M21 — capped at 2× even on 3× displays;
  *  the slight quality reduction is imperceptible, the memory savings
@@ -588,21 +589,22 @@ export class SharedRenderer {
     // the lens maps to bounds.x + bounds.w*localU (etc), so the
     // unrefracted body shows the actual content behind the lens.
     //
-    // Coverage rect (where the backdrop is visually painted on the
-    // page) defaults to the viewport when no anchor is set — the
-    // canonical Mode A page-background-cover case. When an anchor IS
-    // set, we use its getBoundingClientRect — covers Mode A on a
-    // specific <img>, Mode B on a `<canvas>`/`<video>`, etc.
+    // Coverage rect (where the backdrop CONTENT is actually painted
+    // on the page) defaults to the viewport when no anchor is set.
+    // With an anchor, we read the PAINTED rect — for HTMLImageElement
+    // with object-fit:cover/contain/none, painted rect ≠ CSS rect, and
+    // getPaintedRect handles the math. For other anchor types
+    // (canvases, videos, divs), painted rect == CSS rect.
     let coverageX: number;
     let coverageY: number;
     let coverageW: number;
     let coverageH: number;
     if (cfg.backdropAnchor) {
-      const r = cfg.backdropAnchor.getBoundingClientRect();
-      coverageX = r.left;
-      coverageY = r.top;
-      coverageW = Math.max(1, r.width);
-      coverageH = Math.max(1, r.height);
+      const p = getPaintedRect(cfg.backdropAnchor);
+      coverageX = p.x;
+      coverageY = p.y;
+      coverageW = Math.max(1, p.w);
+      coverageH = Math.max(1, p.h);
     } else {
       coverageX = 0;
       coverageY = 0;
