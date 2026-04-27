@@ -36,6 +36,7 @@ import {
   ensureFBOTextures,
   type LensGLResources,
 } from "./lens-gl";
+import { getPaintedRect } from "./painted-rect";
 
 /** Devicepixel cap. Design §M21 — capped at 2× even on 3× displays;
  *  the slight quality reduction is imperceptible, the memory savings
@@ -347,11 +348,16 @@ export class SharedRenderer {
     if (this.lenses.size === 0) this.cancelTick();
   }
 
-  /** Upload an image / canvas as a lens's backdrop texture. Marks the
-   *  lens's blur layers dirty so the next render rebuilds them. */
+  /** Upload an image / canvas / video frame as a lens's backdrop texture.
+   *  Marks the lens's blur layers dirty so the next render rebuilds them.
+   *  WebGL's texImage2D accepts all four TexImageSource types natively. */
   uploadBackdrop(
     lens: Lens,
-    source: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
+    source:
+      | HTMLImageElement
+      | HTMLCanvasElement
+      | HTMLVideoElement
+      | ImageBitmap,
   ): void {
     if (this.destroyed) return;
     if (!lens.glResources) return;
@@ -380,10 +386,16 @@ export class SharedRenderer {
       source as TexImageSource,
     );
 
-    res.textureW =
-      "width" in source ? (source as { width: number }).width : 0;
-    res.textureH =
-      "height" in source ? (source as { height: number }).height : 0;
+    // Width/height come from different properties depending on type.
+    // Video uses videoWidth/videoHeight (the raw frame dims, not the
+    // <video> element's CSS size). Image/canvas/bitmap use width/height.
+    if (source instanceof HTMLVideoElement) {
+      res.textureW = source.videoWidth;
+      res.textureH = source.videoHeight;
+    } else {
+      res.textureW = (source as { width: number }).width;
+      res.textureH = (source as { height: number }).height;
+    }
     res.bodyBlurDirty = true;
     res.lightBlurDirty = true;
     res.lastBlurRadius = -1;
@@ -454,6 +466,21 @@ export class SharedRenderer {
       if (lens.needsScrollUpdate) {
         const r = lens.host.getBoundingClientRect();
         lens.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+      }
+      // Mode B refresh — live elements re-upload here:
+      //   - live-canvas: every frame (no native change-event)
+      //   - live-video: only when requestVideoFrameCallback fired
+      //                 (needsTextureRefresh set by the callback)
+      if (lens.backdropSource && lens.glResources) {
+        if (lens.backdropKind === "live-canvas") {
+          this.uploadBackdrop(lens, lens.backdropSource);
+        } else if (
+          lens.backdropKind === "live-video" &&
+          lens.needsTextureRefresh
+        ) {
+          this.uploadBackdrop(lens, lens.backdropSource);
+          lens.needsTextureRefresh = false;
+        }
       }
       this.renderLens(lens);
     }
@@ -562,19 +589,36 @@ export class SharedRenderer {
     // the lens maps to bounds.x + bounds.w*localU (etc), so the
     // unrefracted body shows the actual content behind the lens.
     //
-    // Sub-task 3c assumption: the backdrop covers the viewport (the
-    // canonical Mode A case — page-background image, full-viewport
-    // canvas, video, etc). Sub-task 5 generalizes for backdrops that
-    // sit at arbitrary parent rects with cover/contain/fill semantics.
-    const vw = window.innerWidth || document.documentElement.clientWidth || w;
-    const vh =
-      window.innerHeight || document.documentElement.clientHeight || h;
+    // Coverage rect (where the backdrop CONTENT is actually painted
+    // on the page) defaults to the viewport when no anchor is set.
+    // With an anchor, we read the PAINTED rect — for HTMLImageElement
+    // with object-fit:cover/contain/none, painted rect ≠ CSS rect, and
+    // getPaintedRect handles the math. For other anchor types
+    // (canvases, videos, divs), painted rect == CSS rect.
+    let coverageX: number;
+    let coverageY: number;
+    let coverageW: number;
+    let coverageH: number;
+    if (cfg.backdropAnchor) {
+      const p = getPaintedRect(cfg.backdropAnchor);
+      coverageX = p.x;
+      coverageY = p.y;
+      coverageW = Math.max(1, p.w);
+      coverageH = Math.max(1, p.h);
+    } else {
+      coverageX = 0;
+      coverageY = 0;
+      coverageW =
+        window.innerWidth || document.documentElement.clientWidth || w;
+      coverageH =
+        window.innerHeight || document.documentElement.clientHeight || h;
+    }
     gl.uniform4f(
       this.glassUniforms["u_bounds"]!,
-      lens.rect.x / vw,
-      lens.rect.y / vh,
-      lens.rect.w / vw,
-      lens.rect.h / vh,
+      (lens.rect.x - coverageX) / coverageW,
+      (lens.rect.y - coverageY) / coverageH,
+      lens.rect.w / coverageW,
+      lens.rect.h / coverageH,
     );
 
     // Per-lens shader uniforms. radius scaled by DPR so the rounded

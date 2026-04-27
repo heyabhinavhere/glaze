@@ -54,6 +54,10 @@ export interface LensConfig {
     | HTMLCanvasElement
     | null;
   backdropFrom: HTMLElement | (() => HTMLElement) | null;
+  /** Where the backdrop sits on the page. Used by the renderer to
+   *  compute u_bounds (lens position in backdrop UV space). null =
+   *  the viewport (canonical Mode A page-background case). */
+  backdropAnchor: HTMLElement | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -115,4 +119,5 @@ export const DEFAULT_LENS_CONFIG: LensConfig = {
   // Backdrop — set by createGlass arg or auto-detected (sub-task 5)
   backdrop: null,
   backdropFrom: null,
+  backdropAnchor: null,
 };

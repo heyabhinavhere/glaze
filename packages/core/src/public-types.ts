@@ -114,6 +114,20 @@ export interface GlassConfigUpdate {
   dropShadow?: ShadowConfig;
   backdrop?: string | HTMLImageElement | HTMLVideoElement | HTMLCanvasElement;
   backdropFrom?: HTMLElement | (() => HTMLElement);
+  /** The element the backdrop visually covers on the page. Used to
+   *  compute lens bounds in the backdrop's UV space — the shader
+   *  samples the right region of the texture by knowing where the
+   *  lens sits within the rendered backdrop.
+   *
+   *  Examples:
+   *    - Page background image (fixed, cover): pass null (default —
+   *      treats viewport as the coverage rect).
+   *    - <img> tag elsewhere on the page: pass that <img>.
+   *    - CSS `background-image` on a specific div: pass that div.
+   *
+   *  Sub-task 5c's auto-detection sets this automatically for users
+   *  who don't pass it explicitly. */
+  backdropAnchor?: HTMLElement | null;
 }
 
 /** Keys writable via updateUniform()'s zero-allocation hot path. Restricted

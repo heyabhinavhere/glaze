@@ -41,7 +41,7 @@
     {
       "name": "@glazelab/core (default entry)",
       "path": "dist/index.js",
-      "limit": "15 KB"
+      "limit": "16 KB"
     },
     {
       "name": "@glazelab/core/full",
