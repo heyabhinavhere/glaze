@@ -22,6 +22,7 @@ import { DEFAULT_LENS_CONFIG } from "./internal/types";
 import { ensurePrewarm } from "./internal/prewarm";
 import { isSupported } from "./is-supported";
 import { resolveBackdrop } from "./internal/backdrop-loader";
+import { autoDetectBackdrop } from "./internal/auto-detect";
 import type { ColorInput, GlassConfigUpdate, GlassHandle } from "./public-types";
 
 /** No-op handle — returned when the runtime can't create a real lens
@@ -88,6 +89,23 @@ export function createGlass(
 
   // Build the resolved LensConfig from defaults + user partial.
   const resolved = mergeConfig(config);
+
+  // Auto-detection: when no backdrop and no backdropFrom were
+  // provided, walk the host's ancestors to figure out what's behind
+  // it. This is the "drop-in glass" UX — `<Glaze>nav</Glaze>` works
+  // without an explicit prop. Sub-task 5c.
+  if (resolved.backdrop === null && resolved.backdropFrom === null) {
+    const auto = autoDetectBackdrop(target);
+    if (auto.backdrop !== null) {
+      resolved.backdrop = auto.backdrop;
+      // Honor user's explicit anchor if they set one; otherwise use
+      // the auto-detected anchor.
+      if (resolved.backdropAnchor === null) {
+        resolved.backdropAnchor = auto.backdropAnchor;
+      }
+    }
+  }
+
   const lens = new Lens(target, resolved);
   renderer.registerLens(lens);
 
@@ -95,12 +113,11 @@ export function createGlass(
   // calls (e.g., React StrictMode cleanup that fires twice).
   let destroyed = false;
 
-  // Async backdrop load — when the config provides a backdrop, kick
-  // off the decode and upload to GPU as soon as it's ready. The lens
-  // renders blank until the texture is bound; with the perf-fix
-  // module-level Promise cache (decodeImageOnce) the same URL across
-  // multiple lenses shares one decode. Errors degrade silently in
-  // production (lens stays blank) and surface in dev via console.
+  // Async backdrop load — when the config (explicit OR auto-detected)
+  // resolved to a backdrop, kick off the decode and upload to GPU as
+  // soon as it's ready. The lens renders blank until the texture is
+  // bound; the module-level Promise cache (decodeImageOnce) shares a
+  // single decode across same-URL callers.
   if (resolved.backdrop !== null) {
     void loadAndUploadBackdrop(lens, renderer, resolved.backdrop);
   }
