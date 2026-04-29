@@ -52,8 +52,10 @@ export function userToUniform(
 ): number {
   const r = ADVANCED_RANGES[key];
   if (key === "saturation" || key === "brightness") {
-    // These are ratios: user 100 = 1.0 (neutral), scaled from 0 to max.
-    return (value / 100) * r.max;
+    // These are ratios: user 100 = 1.0 (neutral), below 100 reduces,
+    // above 100 boosts. Do not map across the full min/max range like the
+    // other sliders, or the default 80% brightness becomes 1.6x.
+    return clamp(value / 100, r.min, r.max);
   }
   return lerp(r.min, r.max, clamp(value, 0, 100) / 100);
 }
@@ -65,7 +67,7 @@ export function uniformToUser(
 ): number {
   const r = ADVANCED_RANGES[key];
   if (key === "saturation" || key === "brightness") {
-    return (uniform / r.max) * 100;
+    return uniform * 100;
   }
   return ((uniform - r.min) / (r.max - r.min)) * 100;
 }
@@ -210,10 +212,9 @@ function applyAdvanced(
   over("specularSize", "specularSize");
   over("specularOpacity", "specularOpacity");
   over("frost", "frost");
-
-  // Saturation/brightness don't map to a single uniform in the current
-  // shader (those are folded into the backdrop blur stack). When we add
-  // the saturation/brightness pass to the shader, these will flow through.
+  // Saturation/brightness are intentionally not applied to this legacy
+  // uniform model. The shader still has neutral uniforms set by the legacy
+  // renderer; tonal controls need a deliberate pass before they affect UI.
   return u;
 }
 

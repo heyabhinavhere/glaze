@@ -83,9 +83,12 @@ export function GlassCanvas({
 }: GlassCanvasProps) {
   const rendererRef = useRef<WebGLGlassRenderer | null>(null);
   const uniformsRef = useRef<GlassUniforms>(uniforms);
-  uniformsRef.current = uniforms;
   const panelUniformsRef = useRef<GlassUniforms | undefined>(panelUniforms);
-  panelUniformsRef.current = panelUniforms;
+
+  useLayoutEffect(() => {
+    uniformsRef.current = uniforms;
+    panelUniformsRef.current = panelUniforms;
+  }, [uniforms, panelUniforms]);
 
   /**
    * Cache decoded fast-path images by src. Module-level persistent map
@@ -113,7 +116,6 @@ export function GlassCanvas({
       rendererRef.current = renderer;
       renderer.start();
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error("WebGLGlassRenderer failed to init:", e);
       return;
     }
@@ -122,7 +124,9 @@ export function GlassCanvas({
     // makes first-mount work without requiring a bg switch: setting state
     // here causes a re-render, which triggers the capture useLayoutEffect
     // to re-run (its deps include rendererTick) with a valid rendererRef.
-    setRendererTick((t) => t + 1);
+    queueMicrotask(() => {
+      if (!cancelled) setRendererTick((t) => t + 1);
+    });
 
     // Two reusable lens objects — we mutate them in-place each frame
     // instead of allocating per-frame to avoid GC churn.
@@ -273,7 +277,6 @@ export function GlassCanvas({
           if (!c || cancelled) return;
           renderer.uploadBackdrop(c);
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.error("fast image capture failed:", e);
         }
       } else {
@@ -289,7 +292,6 @@ export function GlassCanvas({
           if (cancelled) return;
           renderer.uploadBackdrop(canvas);
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.error("html2canvas failed:", e);
         }
       }

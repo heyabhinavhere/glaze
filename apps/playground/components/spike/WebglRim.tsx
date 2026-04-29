@@ -63,11 +63,11 @@ export function WebglRim({
     const panel = panelRef.current;
     if (!panel || !targetElement) return;
 
+    let cancelled = false;
     let renderer: WebGLGlassRenderer;
     try {
       renderer = new WebGLGlassRenderer(targetElement);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error("[spike] WebGLGlassRenderer failed to init:", e);
       return;
     }
@@ -83,9 +83,12 @@ export function WebglRim({
     lensRef.current = lens;
     renderer.setLenses([lens]);
 
-    setReady((t) => t + 1);
+    queueMicrotask(() => {
+      if (!cancelled) setReady((t) => t + 1);
+    });
 
     return () => {
+      cancelled = true;
       renderer.dispose();
       if (rendererRef.current === renderer) rendererRef.current = null;
       lensRef.current = null;

@@ -8,13 +8,13 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "pnpm --filter playground dev",
-    "build": "pnpm -r build",
-    "build:core": "pnpm --filter @glazelab/core build",
-    "build:playground": "pnpm --filter playground build",
-    "lint": "pnpm -r lint",
-    "size": "pnpm --filter @glazelab/core size",
-    "typecheck": "pnpm -r typecheck"
+    "dev": "corepack pnpm --filter playground dev",
+    "build": "corepack pnpm -r build",
+    "build:core": "corepack pnpm --filter @glazelab/core build",
+    "build:playground": "corepack pnpm --filter playground build",
+    "lint": "corepack pnpm -r lint",
+    "size": "corepack pnpm --filter @glazelab/core size",
+    "typecheck": "corepack pnpm -r typecheck"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

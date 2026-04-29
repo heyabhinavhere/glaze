@@ -54,6 +54,16 @@ export default function TestModeCPage() {
       handleRef.current = createGlass(navRef.current, {
         // No `backdrop` prop — auto-detection's Mode C fallback runs.
         radius: 28,
+        frost: 0.32,
+        tint: [1, 1, 1, 0.18],
+        refraction: 0.003,
+        bevelDepth: 0.006,
+        bevelWidth: 1.5,
+        bendZone: 12,
+        chromatic: 0.025,
+        rimIntensity: 0.36,
+        specularSize: 0,
+        specularOpacity: 0,
       });
     });
 
@@ -93,7 +103,9 @@ export default function TestModeCPage() {
           fontSize: 13,
         }}
       >
-        Glass over scrolling DOM (Mode C, auto-detected)
+        <span style={{ position: "relative", zIndex: 1 }}>
+          Glass over scrolling DOM (Mode C, auto-detected)
+        </span>
       </div>
 
       {/* Scrolling article content. No images, no canvases — just

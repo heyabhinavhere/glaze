@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -122,7 +121,10 @@ const PANEL_SPRING = {
 } as const;
 
 export default function Home() {
-  const [config, setConfig] = useState<GlassConfig>(defaultConfig);
+  const [config, setConfig] = useState<GlassConfig>(() => ({
+    ...defaultConfig,
+    tint: { ...BACKGROUNDS[0].suggestedTint },
+  }));
   const [bgId, setBgId] = useState<string>("cups");
   const [autoTint, setAutoTint] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -269,21 +271,6 @@ export default function Home() {
     observer.observe(preview);
     return () => observer.disconnect();
   }, []);
-
-  // Apply background's suggested tint whenever auto-adapt is on and the bg
-  // changes.
-  useEffect(() => {
-    if (!autoTint) return;
-    const current = BACKGROUNDS.find((b) => b.id === bgId);
-    if (!current) return;
-    setConfig((c) => {
-      const t = c.tint;
-      const s = current.suggestedTint;
-      if (t.color === s.color && t.opacity === s.opacity) return c;
-      return { ...c, tint: { ...s } };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bgId, autoTint]);
 
   const { resolved, uniforms, derivedUniforms } = useMemo(
     () => glassConfigToCSS(config),
