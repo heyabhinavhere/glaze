@@ -55,11 +55,16 @@ export const rasterizeDOM: DOMRasterizer = async (
   const skipNodes = new Set<Node>(options.skipNodes ?? []);
 
   try {
-    const captureWidth = Math.max(target.clientWidth, target.scrollWidth);
-    const captureHeight = Math.max(target.clientHeight, target.scrollHeight);
+    const viewportOnly = options.preserveScrollViewport === true;
+    const captureWidth = viewportOnly
+      ? Math.max(1, target.clientWidth)
+      : Math.max(target.clientWidth, target.scrollWidth);
+    const captureHeight = viewportOnly
+      ? Math.max(1, target.clientHeight)
+      : Math.max(target.clientHeight, target.scrollHeight);
     const crop = options.capture;
-    const x = crop ? Math.max(0, Math.floor(crop.x)) : 0;
-    const y = crop ? Math.max(0, Math.floor(crop.y)) : 0;
+    const x = viewportOnly ? 0 : crop ? Math.max(0, Math.floor(crop.x)) : 0;
+    const y = viewportOnly ? 0 : crop ? Math.max(0, Math.floor(crop.y)) : 0;
     const width = crop
       ? Math.max(1, Math.ceil(crop.width))
       : Math.max(1, captureWidth);
@@ -67,47 +72,91 @@ export const rasterizeDOM: DOMRasterizer = async (
       ? Math.max(1, Math.ceil(crop.height))
       : Math.max(1, captureHeight);
 
-    const canvas = await html2canvas(target, {
-      // Capture at 1x DPR — the texture's natural pixel resolution
-      // matches our shader's expectations. Higher DPR is wasteful.
-      scale: 1,
-      // Width/height tracks the target's full scroll dimensions, not
-      // just the visible rect. This is "capture-tall-once" — the
-      // entire scroll context becomes one tall texture, sampled with
-      // scroll offset by the renderer.
-      x,
-      y,
-      width,
-      height,
-      windowWidth: captureWidth,
-      windowHeight: captureHeight,
-      // Fill skipped glass-host holes with the target/body background
-      // instead of transparent black. This keeps Mode C from sampling
-      // premultiplied-alpha voids where the current glass host was
-      // intentionally excluded from the capture.
-      backgroundColor: captureBackgroundColor(target),
-      // Skip our glass canvases. html2canvas's `ignoreElements`
-      // callback runs per-element; we return true for nodes in the
-      // skipNodes set OR any element with data-glaze-canvas /
-      // data-glaze-host (defense-in-depth — the renderer already
-      // passes data-glaze-host elements via skipNodes).
-      ignoreElements: (el) => {
-        if (skipNodes.has(el)) return true;
-        if (el.hasAttribute("data-glaze-canvas")) return true;
-        if (el.hasAttribute("data-glaze-host")) return true;
-        return false;
-      },
-      // Don't allow taint — strict CORS for cross-origin resources.
-      // If a CORS-tainted resource is embedded, we'd rather fail and
-      // return null than have texImage2D reject a tainted canvas
-      // with a SecurityError later.
-      allowTaint: false,
-      useCORS: true,
-      // Quiet logs in production; emit in dev.
-      logging: process.env.NODE_ENV === "development",
-    });
+    const markerAttr = "data-glaze-raster-target";
+    const markerValue = `glaze-mode-c-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+    const previousMarker = target.getAttribute(markerAttr);
+    target.setAttribute(markerAttr, markerValue);
 
-    return canvas;
+    try {
+      const canvas = await html2canvas(target, {
+        // Capture at 1x DPR — the texture's natural pixel resolution
+        // matches our shader's expectations. Higher DPR is wasteful.
+        scale: 1,
+        // Width/height tracks the target's full scroll dimensions, not
+        // just the visible rect. This is "capture-tall-once" — the
+        // entire scroll context becomes one tall texture, sampled with
+        // scroll offset by the renderer.
+        x,
+        y,
+        width,
+        height,
+        windowWidth: captureWidth,
+        windowHeight: captureHeight,
+        // Fill skipped glass-host holes with the target/body background
+        // instead of transparent black. This keeps Mode C from sampling
+        // premultiplied-alpha voids where the current glass host was
+        // intentionally excluded from the capture.
+        backgroundColor: captureBackgroundColor(target),
+        onclone: (doc) => {
+          if (viewportOnly) return;
+          if (isDocumentCaptureTarget(target)) return;
+
+          const clonedTarget = doc.querySelector(
+            `[${markerAttr}="${markerValue}"]`,
+          );
+          const view = clonedTarget?.ownerDocument.defaultView;
+          if (!view || !(clonedTarget instanceof view.HTMLElement)) return;
+
+          // html2canvas otherwise snapshots overflow elements as their
+          // clipped scrollport. Mode C needs the full scroll context so
+          // renderer-side scroll offsets can sample correctly.
+          clonedTarget.style.overflow = "visible";
+          clonedTarget.style.overflowX = "visible";
+          clonedTarget.style.overflowY = "visible";
+          clonedTarget.style.width = `${captureWidth}px`;
+          clonedTarget.style.height = `${captureHeight}px`;
+          clonedTarget.scrollLeft = 0;
+          clonedTarget.scrollTop = 0;
+
+          let ancestor = clonedTarget.parentElement;
+          while (ancestor && ancestor !== doc.body) {
+            ancestor.style.overflow = "visible";
+            ancestor.style.overflowX = "visible";
+            ancestor.style.overflowY = "visible";
+            ancestor = ancestor.parentElement;
+          }
+        },
+        // Skip our glass canvases. html2canvas's `ignoreElements`
+        // callback runs per-element; we return true for nodes in the
+        // skipNodes set OR any element with data-glaze-canvas /
+        // data-glaze-host (defense-in-depth — the renderer already
+        // passes data-glaze-host elements via skipNodes).
+        ignoreElements: (el) => {
+          if (skipNodes.has(el)) return true;
+          if (el.hasAttribute("data-glaze-canvas")) return true;
+          if (el.hasAttribute("data-glaze-host")) return true;
+          return false;
+        },
+        // Don't allow taint — strict CORS for cross-origin resources.
+        // If a CORS-tainted resource is embedded, we'd rather fail and
+        // return null than have texImage2D reject a tainted canvas
+        // with a SecurityError later.
+        allowTaint: false,
+        useCORS: true,
+        // Quiet logs in production; emit in dev.
+        logging: process.env.NODE_ENV === "development",
+      });
+
+      return canvas;
+    } finally {
+      if (previousMarker === null) {
+        target.removeAttribute(markerAttr);
+      } else {
+        target.setAttribute(markerAttr, previousMarker);
+      }
+    }
   } catch (err) {
     if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
@@ -116,6 +165,10 @@ export const rasterizeDOM: DOMRasterizer = async (
     return null;
   }
 };
+
+function isDocumentCaptureTarget(target: HTMLElement): boolean {
+  return target === document.body || target === document.documentElement;
+}
 
 function captureBackgroundColor(target: HTMLElement): string | null {
   const targetBg = getComputedStyle(target).backgroundColor;

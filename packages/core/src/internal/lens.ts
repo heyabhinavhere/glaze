@@ -190,8 +190,8 @@ export class Lens {
     host.setAttribute("data-glaze-host", "");
 
     // Initial rect snapshot.
-    const r = host.getBoundingClientRect();
-    this.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+    this.rect = { x: 0, y: 0, w: 0, h: 0 };
+    this.refreshRect();
 
     // Resize tracking. Static-positioned lenses get rect updates only
     // from this; sticky/fixed need the additional scroll listener that
@@ -297,13 +297,19 @@ export class Lens {
     }
   }
 
-  /** Re-read the host's rect. Triggered by ResizeObserver and (sub-
-   *  task 3d) by scroll for sticky/fixed lenses. */
+  /** Re-read the host's rect. Triggered by ResizeObserver. */
   private handleResize = (): void => {
     if (this.destroyed) return;
+    this.refreshRect();
+  };
+
+  /** Re-read the host's viewport rect. SharedRenderer calls this for
+   *  scroll-sensitive lenses because ResizeObserver does not fire when
+   *  scrolling changes getBoundingClientRect(). */
+  refreshRect(): void {
     const r = this.host.getBoundingClientRect();
     this.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
-  };
+  }
 
   /** Blit a rendered ImageBitmap (from the offscreen GL output) onto
    *  this lens's visible 2D canvas. Resizes the canvas backing store

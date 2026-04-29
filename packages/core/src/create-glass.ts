@@ -138,6 +138,7 @@ export function createGlass(
   // Track destroy state so the handle is idempotent across multiple
   // calls (e.g., React StrictMode cleanup that fires twice).
   let destroyed = false;
+  let modeCScrollCleanup: (() => void) | null = null;
   const startModeC = (captureTarget: HTMLElement, invalidate = false): void => {
     if (destroyed) return;
     if (invalidate) lens.generation++;
@@ -145,6 +146,10 @@ export function createGlass(
     if (lens.config.backdropAnchor === null) {
       lens.config = { ...lens.config, backdropAnchor: captureTarget };
     }
+    modeCScrollCleanup?.();
+    modeCScrollCleanup = attachModeCScrollRefresh(captureTarget, () => {
+      startModeC(captureTarget, true);
+    });
     void loadAndApplyModeC(lens, renderer, captureTarget);
   };
 
@@ -198,6 +203,8 @@ export function createGlass(
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      modeCScrollCleanup?.();
+      modeCScrollCleanup = null;
       renderer.unregisterLens(lens.id);
       lens.destroy();
       release();
@@ -421,6 +428,7 @@ async function loadAndApplyModeC(
     const canvas = await rasterize(target, {
       skipNodes,
       capture: capture.kind === "windowed" ? capture : undefined,
+      preserveScrollViewport: capture.reason === ELEMENT_SCROLL_CAPTURE_REASON,
     });
     if (lens.destroyed || lens.generation !== startGeneration) return;
     if (!canvas) {
@@ -482,11 +490,24 @@ interface ModeCCapturePlan {
   reason: string | null;
 }
 
+const ELEMENT_SCROLL_CAPTURE_REASON = "element scroll viewport capture";
+
 function computeModeCCapture(
   target: HTMLElement,
   lens: Lens,
   maxTextureSize: number,
 ): ModeCCapturePlan {
+  if (isElementScrollTarget(target)) {
+    return {
+      x: target.scrollLeft,
+      y: target.scrollTop,
+      width: Math.max(1, target.clientWidth),
+      height: Math.max(1, target.clientHeight),
+      kind: "windowed",
+      reason: ELEMENT_SCROLL_CAPTURE_REASON,
+    };
+  }
+
   const full = getModeCFullSize(target);
   if (full.width <= maxTextureSize && full.height <= maxTextureSize) {
     return {
@@ -592,6 +613,36 @@ function isDocumentScrollTarget(target: HTMLElement): boolean {
   return target === document.body || target === document.documentElement;
 }
 
+function isElementScrollTarget(target: HTMLElement): boolean {
+  if (isDocumentScrollTarget(target)) return false;
+  return (
+    target.scrollHeight > target.clientHeight ||
+    target.scrollWidth > target.clientWidth
+  );
+}
+
+function attachModeCScrollRefresh(
+  target: HTMLElement,
+  refresh: () => void,
+): (() => void) | null {
+  if (!isElementScrollTarget(target)) return null;
+
+  let timer: number | null = null;
+  const onScroll = () => {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      timer = null;
+      refresh();
+    }, 80);
+  };
+
+  target.addEventListener("scroll", onScroll, { passive: true });
+  return () => {
+    if (timer !== null) window.clearTimeout(timer);
+    target.removeEventListener("scroll", onScroll);
+  };
+}
+
 function createDebugInfo(
   lens: Lens,
   renderer: ReturnType<typeof acquire>,
@@ -641,8 +692,17 @@ function createDebugInfo(
         }
       : null,
     lastError: lens.lastError ?? modeC?.lastError ?? null,
-    backdropPreview: "",
+    backdropPreview: getBackdropPreview(lens),
   };
+}
+
+function getBackdropPreview(lens: Lens): string {
+  if (!(lens.backdropSource instanceof HTMLCanvasElement)) return "";
+  try {
+    return lens.backdropSource.toDataURL("image/png");
+  } catch {
+    return "";
+  }
 }
 
 function getDebugSource(lens: Lens): GlassDebugInfo["source"] {

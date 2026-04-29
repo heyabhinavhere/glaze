@@ -10,7 +10,7 @@
  *   3. Element scroll Mode C: a glass overlay samples an overflow scroller.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createGlass,
   type GlassConfigUpdate,
@@ -55,8 +55,11 @@ export default function TestModeCPage() {
   const scrollerSourceRef = useRef<HTMLDivElement>(null);
   const scrollerGlassRef = useRef<HTMLDivElement>(null);
   const handlesRef = useRef<GlassHandle[]>([]);
+  const [debugRows, setDebugRows] = useState<string[]>([]);
+  const [scrollerPreview, setScrollerPreview] = useState("");
 
   useEffect(() => {
+    let debugInterval: number | null = null;
     const id = requestAnimationFrame(() => {
       const handles: GlassHandle[] = [];
 
@@ -86,10 +89,47 @@ export default function TestModeCPage() {
 
       handlesRef.current = handles;
       window.__glazeModeCHandles = handles;
+
+      const readDebug = () => {
+        setDebugRows(
+          handles.map((handle, index) => {
+            const debug = handle.debug();
+            if (!debug) return `${index}: debug unavailable`;
+            const texture = debug.texture
+              ? `${debug.texture.width}x${debug.texture.height}/max${debug.texture.maxTextureSize ?? "?"}`
+              : "none";
+            const capture = debug.capture
+              ? `${debug.capture.kind}@${debug.capture.x},${debug.capture.y} ${debug.capture.width}x${debug.capture.height}`
+              : "none";
+            const scroll = debug.scroll
+              ? `${debug.scroll.target}:${debug.scroll.x},${debug.scroll.y}`
+              : "none";
+            return [
+              `${index}: mode=${debug.backdropMode}`,
+              `source=${debug.source}`,
+              `texture=${texture}`,
+              `capture=${capture}`,
+              `scroll=${scroll}`,
+              `error=${debug.lastError ?? "none"}`,
+            ].join(" ");
+          }),
+        );
+
+        const preview = handles[2]?.debug()?.backdropPreview ?? "";
+        if (preview) {
+          setScrollerPreview((current) =>
+            current === preview ? current : preview,
+          );
+        }
+      };
+
+      readDebug();
+      debugInterval = window.setInterval(readDebug, 500);
     });
 
     return () => {
       cancelAnimationFrame(id);
+      if (debugInterval !== null) window.clearInterval(debugInterval);
       for (const handle of handlesRef.current) handle.destroy();
       handlesRef.current = [];
       delete window.__glazeModeCHandles;
@@ -203,7 +243,7 @@ export default function TestModeCPage() {
               ref={scrollerGlassRef}
               style={{
                 position: "absolute",
-                top: 18,
+                top: 272,
                 left: "50%",
                 transform: "translateX(-50%)",
                 width: "min(520px, calc(100% - 40px))",
@@ -239,6 +279,47 @@ export default function TestModeCPage() {
             </div>
           </div>
         </section>
+
+        {debugRows.length > 0 && (
+          <section
+            data-testid="mode-c-debug"
+            style={{
+              marginTop: 32,
+              padding: 16,
+              border: "1px solid rgba(0,0,0,0.12)",
+              borderRadius: 12,
+              background: "#111827",
+              color: "#f9fafb",
+            }}
+          >
+            <pre
+              style={{
+                margin: 0,
+                whiteSpace: "pre-wrap",
+                fontSize: 12,
+                lineHeight: 1.5,
+              }}
+            >
+              {debugRows.join("\n")}
+            </pre>
+            {scrollerPreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt="Element scroll captured backdrop preview"
+                src={scrollerPreview}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  maxHeight: 260,
+                  marginTop: 12,
+                  borderRadius: 8,
+                  objectFit: "cover",
+                  objectPosition: "top",
+                }}
+              />
+            )}
+          </section>
+        )}
       </main>
 
       <div

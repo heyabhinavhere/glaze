@@ -463,13 +463,12 @@ export class SharedRenderer {
 
     for (const lens of this.lenses.values()) {
       if (lens.destroyed) continue;
-      // Sticky/fixed lenses change screen position during scroll without
-      // firing ResizeObserver. Re-read their rect each frame they tick.
-      // Cheap (~0.05ms per call). Static-positioned lenses keep their
-      // ResizeObserver-fed rect.
-      if (lens.needsScrollUpdate) {
-        const r = lens.host.getBoundingClientRect();
-        lens.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+      // Sticky/fixed lenses and Mode C lenses need live viewport rects.
+      // ResizeObserver does not fire when scroll changes
+      // getBoundingClientRect(), and Mode C maps through live scroll
+      // geometry even for absolute overlays inside normal page flow.
+      if (lens.needsScrollUpdate || lens.modeC) {
+        lens.refreshRect();
       }
       // Mode B refresh — live elements re-upload here:
       //   - live-canvas: every frame (no native change-event)

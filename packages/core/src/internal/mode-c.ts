@@ -40,6 +40,10 @@ export interface DOMRasterizerOptions {
     width: number;
     height: number;
   };
+  /** Capture the target's current visible scrollport instead of trying
+   *  to rasterize its full scrollHeight. Used for element scrollers,
+   *  where html2canvas clips offscreen overflow content. */
+  preserveScrollViewport?: boolean;
 }
 
 let rasterizer: DOMRasterizer | null = null;

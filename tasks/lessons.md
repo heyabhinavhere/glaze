@@ -57,3 +57,97 @@ test, doc update, or explicit parked limitation.
 - Artifact: Playground `TS2305` false errors while `packages/core` DTS output
   was being regenerated.
 - Owner: Codex.
+
+## 2026-04-29 - Mode C Rects Must Track Scroll, Not Just Resize
+
+- Task: Element scroll Mode C.
+- Mistake: The element-scroll harness used an absolute overlay, but the renderer
+  only refreshed viewport rects for sticky/fixed lenses.
+- Root cause: ResizeObserver does not fire when page or container scrolling
+  changes `getBoundingClientRect()`. The visible canvas moved with the DOM, but
+  the shader sampled with stale lens coordinates.
+- Why existing gates missed it: Top and mid page screenshots showed the auto and
+  explicit sticky cases, but the element-scroll scenario was not checked after
+  scrolling the page to the fixture and then scrolling the inner container.
+- New rule: Mode C lenses must refresh their viewport rect during render because
+  Mode C sampling depends on live scroll geometry.
+- Required future behavior: Element-scroll evidence must include before and
+  after inner-scroll screenshots plus debug output showing changing `scroll.y`.
+- Artifact: `/test-mode-c` element-scroll fixture.
+- Owner: Codex.
+
+## 2026-04-29 - Visual Fixtures Need High-Signal Backdrops
+
+- Task: Element scroll Mode C.
+- Mistake: The element-scroll glass was positioned over top padding and text,
+  so even a correct sample looked like a static white pill.
+- Root cause: The fixture was designed to exercise a code path, not to make the
+  optical result obvious to a reviewer.
+- Why existing gates missed it: Console logs and route screenshots cannot prove
+  visual correctness when the test scene itself has low contrast under the lens.
+- New rule: Every glass verification fixture must place the lens over
+  high-signal content: saturated color, image detail, or text crossing the rim.
+- Required future behavior: Element-scroll screenshots must show the glass over
+  different colored cards before and after inner scrolling.
+- Artifact: `/test-mode-c` element-scroll fixture.
+- Owner: Codex.
+
+## 2026-04-29 - Overflow Capture Must Expand The Clone
+
+- Task: Element scroll Mode C.
+- Mistake: Element scroll was treated as a coordinate-mapping problem before
+  proving the rasterized texture contained the full scrollable content.
+- Root cause: `html2canvas` snapshots overflow elements as a clipped scrollport
+  unless the cloned target is expanded, and parent wrappers with
+  `overflow:hidden` can still clip the expanded clone. The renderer then sampled
+  scroll offsets from a texture that did not contain the expected colored card
+  content.
+- Why existing gates missed it: The debug data exposed texture dimensions, but
+  there was no gate proving that an overflow scroller's captured texture had
+  been expanded before upload.
+- New rule: For Mode C element scrollers, the rasterizer must expand the cloned
+  target to its scrollWidth/scrollHeight, reset clone scroll offsets, and remove
+  cloned ancestor overflow clipping before capture.
+- Required future behavior: Element-scroll verification must prove both browser
+  behavior and capture behavior: visible before/after inner-scroll screenshots,
+  zero console errors, and debug capture dimensions matching scroll dimensions.
+- Artifact: `packages/core/src/full/dom-rasterize.ts`.
+- Owner: Codex.
+
+## 2026-04-29 - Element Scrollers Need A Separate Capture Strategy
+
+- Task: Element scroll Mode C.
+- Mistake: Full-scroll capture was assumed to work for overflow elements because
+  document/body capture works for long pages.
+- Root cause: `html2canvas` can allocate a tall element-scroller canvas while
+  still painting only the original visible scrollport; cloned target expansion
+  and ancestor unclipping did not make later overflow children render into the
+  texture.
+- Why existing gates missed it: Texture dimensions were treated as proof of
+  content coverage. Pixel inspection of the captured preview showed the later
+  card bands were blank.
+- New rule: Until the rasterizer is replaced, element scrollers must use
+  current-scrollport capture plus an element scroll refresh, while document/body
+  Mode C can keep full-scroll capture.
+- Required future behavior: For element scrollers, debug evidence must show
+  `capture.kind=windowed`, the element scroll offset changing, and the lens
+  color/content changing after scroll-stop refresh.
+- Artifact: `packages/core/src/create-glass.ts`.
+- Owner: Codex.
+
+## 2026-04-29 - Stop Playground Before Rebuilding Workspace Packages
+
+- Task: Mode C verification.
+- Mistake: `build:core` was run while the Next playground dev server was
+  serving pages that import `@glazelab/core`.
+- Root cause: The core build cleans `packages/core/dist` before writing new
+  output, so the dev server can briefly resolve the workspace package while its
+  entry files are missing.
+- Why existing gates missed it: The build itself passed, but the browser/server
+  log emitted transient `Module not found` errors during the clean window.
+- New rule: Stop or avoid actively browsing the playground before rebuilding
+  package `dist`; restart the dev server after the package build completes.
+- Required future behavior: Visual evidence logs must not include transient
+  package-resolution errors caused by our verification workflow.
+- Artifact: Next dev-server log while rebuilding `@glazelab/core`.
+- Owner: Codex.
