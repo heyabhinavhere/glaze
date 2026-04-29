@@ -31,6 +31,15 @@ export interface DOMRasterizerOptions {
    *  loops — without this, capturing a page with our own glass on it
    *  would render the glass-of-the-glass-of-the-glass... */
   skipNodes?: Iterable<Node>;
+  /** Optional content-space crop. Used when the full scroll context is
+   *  larger than the GPU's max texture size; the renderer captures a
+   *  window around the lens instead of uploading an impossible texture. */
+  capture?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 let rasterizer: DOMRasterizer | null = null;

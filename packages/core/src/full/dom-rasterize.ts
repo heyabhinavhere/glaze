@@ -55,6 +55,18 @@ export const rasterizeDOM: DOMRasterizer = async (
   const skipNodes = new Set<Node>(options.skipNodes ?? []);
 
   try {
+    const captureWidth = Math.max(target.clientWidth, target.scrollWidth);
+    const captureHeight = Math.max(target.clientHeight, target.scrollHeight);
+    const crop = options.capture;
+    const x = crop ? Math.max(0, Math.floor(crop.x)) : 0;
+    const y = crop ? Math.max(0, Math.floor(crop.y)) : 0;
+    const width = crop
+      ? Math.max(1, Math.ceil(crop.width))
+      : Math.max(1, captureWidth);
+    const height = crop
+      ? Math.max(1, Math.ceil(crop.height))
+      : Math.max(1, captureHeight);
+
     const canvas = await html2canvas(target, {
       // Capture at 1x DPR — the texture's natural pixel resolution
       // matches our shader's expectations. Higher DPR is wasteful.
@@ -63,14 +75,17 @@ export const rasterizeDOM: DOMRasterizer = async (
       // just the visible rect. This is "capture-tall-once" — the
       // entire scroll context becomes one tall texture, sampled with
       // scroll offset by the renderer.
-      width: target.clientWidth,
-      height: Math.max(target.clientHeight, target.scrollHeight),
-      windowWidth: target.clientWidth,
-      windowHeight: Math.max(target.clientHeight, target.scrollHeight),
-      // Transparent background so empty regions don't bleed solid
-      // color into the lens. Body's actual bg-color comes through the
-      // child element's style.
-      backgroundColor: null,
+      x,
+      y,
+      width,
+      height,
+      windowWidth: captureWidth,
+      windowHeight: captureHeight,
+      // Fill skipped glass-host holes with the target/body background
+      // instead of transparent black. This keeps Mode C from sampling
+      // premultiplied-alpha voids where the current glass host was
+      // intentionally excluded from the capture.
+      backgroundColor: captureBackgroundColor(target),
       // Skip our glass canvases. html2canvas's `ignoreElements`
       // callback runs per-element; we return true for nodes in the
       // skipNodes set OR any element with data-glaze-canvas /
@@ -101,3 +116,21 @@ export const rasterizeDOM: DOMRasterizer = async (
     return null;
   }
 };
+
+function captureBackgroundColor(target: HTMLElement): string | null {
+  const targetBg = getComputedStyle(target).backgroundColor;
+  if (!isTransparent(targetBg)) return targetBg;
+
+  const bodyBg = getComputedStyle(document.body).backgroundColor;
+  if (!isTransparent(bodyBg)) return bodyBg;
+
+  const rootBg = getComputedStyle(document.documentElement).backgroundColor;
+  if (!isTransparent(rootBg)) return rootBg;
+
+  return null;
+}
+
+function isTransparent(value: string): boolean {
+  if (!value || value === "transparent") return true;
+  return /rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test(value);
+}

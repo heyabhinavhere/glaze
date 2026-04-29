@@ -158,8 +158,42 @@ export interface GlassDebugInfo {
   /** Last-frame timing in milliseconds. */
   lastFrame: { capture: number; render: number; total: number };
   /** Detected backdrop mode. "fallback" = CSS path, no GL. */
-  backdropMode: "A" | "B" | "C" | "fallback";
+  backdropMode: "A" | "B" | "C" | "fallback" | "none";
+  /** Resolved source class for the current backdrop. */
+  source: "url" | "image" | "video" | "canvas" | "dom" | "none";
+  /** Element used as the visual coverage anchor, if any. */
+  anchor: GlassDebugElement | null;
+  /** Uploaded texture dimensions and the runtime GPU limit. */
+  texture: {
+    width: number;
+    height: number;
+    maxTextureSize: number | null;
+  } | null;
+  /** Current scroll offset for Mode C sampling, if relevant. */
+  scroll: {
+    x: number;
+    y: number;
+    target: "window" | "element";
+  } | null;
+  /** Mode C capture window in content-space pixels. */
+  capture: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    kind: "full" | "windowed";
+    reason: string | null;
+  } | null;
+  /** Last load/capture/rendering error known to the handle. */
+  lastError: string | null;
   /** Base64 PNG of the current captured backdrop, paste into DevTools
    *  to inspect. Empty string for Mode A/B (just the source URL/element). */
   backdropPreview: string;
+}
+
+export interface GlassDebugElement {
+  tagName: string;
+  id: string;
+  className: string;
+  rect: { x: number; y: number; width: number; height: number };
 }

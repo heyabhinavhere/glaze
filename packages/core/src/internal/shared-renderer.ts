@@ -401,6 +401,10 @@ export class SharedRenderer {
     res.lastBlurRadius = -1;
   }
 
+  getMaxTextureSize(): number {
+    return this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
+  }
+
   /** Tear down all GL resources. Idempotent — safe to call multiple times. */
   destroy(): void {
     if (this.destroyed) return;
@@ -514,6 +518,7 @@ export class SharedRenderer {
    *  7. transferToImageBitmap → blit to the lens's visible 2D canvas.
    */
   private renderLens(lens: Lens): void {
+    const renderStart = performance.now();
     const res = lens.glResources;
     if (!res || !res.texture || res.textureW === 0) return;
 
@@ -599,7 +604,22 @@ export class SharedRenderer {
     let coverageY: number;
     let coverageW: number;
     let coverageH: number;
-    if (cfg.backdropAnchor) {
+    if (lens.modeC) {
+      const c = lens.modeC;
+      const target = c.target;
+      const r = target.getBoundingClientRect();
+      const bodyLike =
+        target === document.body || target === document.documentElement;
+      if (bodyLike) {
+        coverageX = r.left + c.x;
+        coverageY = r.top + c.y;
+      } else {
+        coverageX = r.left - target.scrollLeft + c.x;
+        coverageY = r.top - target.scrollTop + c.y;
+      }
+      coverageW = Math.max(1, c.width);
+      coverageH = Math.max(1, c.height);
+    } else if (cfg.backdropAnchor) {
       const p = getPaintedRect(cfg.backdropAnchor);
       coverageX = p.x;
       coverageY = p.y;
@@ -663,6 +683,12 @@ export class SharedRenderer {
     // ---- Transfer to lens's visible 2D canvas -------------------------
     const bitmap = this.offscreen.transferToImageBitmap();
     lens.blit(bitmap);
+    const renderMs = performance.now() - renderStart;
+    lens.lastFrame = {
+      capture: lens.lastFrame.capture,
+      render: renderMs,
+      total: lens.lastFrame.capture + renderMs,
+    };
   }
 
   /** Multi-pass separable Gaussian on the body texture. Total radius

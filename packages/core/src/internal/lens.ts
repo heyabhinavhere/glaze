@@ -25,6 +25,17 @@ import type { LensGLResources } from "./lens-gl";
 
 let lensIdCounter = 0;
 
+export interface ModeCCaptureState {
+  target: HTMLElement;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  kind: "full" | "windowed";
+  reason: string | null;
+  lastError: string | null;
+}
+
 export class Lens {
   readonly id: number;
   readonly host: HTMLElement;
@@ -58,6 +69,22 @@ export class Lens {
    *  - "live-video":  re-upload on requestVideoFrameCallback fires
    *  - "live-canvas": re-upload every render frame (no native event) */
   backdropKind: "static" | "live-video" | "live-canvas" | null = null;
+
+  /** Public/debug mode classification. */
+  backdropMode: "A" | "B" | "C" | null = null;
+
+  /** Mode C capture metadata. The renderer uses this to map the lens's
+   *  viewport rect into the captured scroll-context texture, including
+   *  element scroll offsets and windowed-capture offsets. */
+  modeC: ModeCCaptureState | null = null;
+
+  /** Development diagnostics surfaced through handle.debug(). */
+  lastError: string | null = null;
+  lastFrame: { capture: number; render: number; total: number } = {
+    capture: 0,
+    render: 0,
+    total: 0,
+  };
 
   /** Set by the video frame callback when a new frame is decoded.
    *  Cleared by the renderer after re-upload. Live-canvas doesn't
