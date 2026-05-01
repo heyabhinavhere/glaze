@@ -244,8 +244,8 @@ void main() {
   float d_in = -sdRoundBox(refract_p_px, refract_b_px, u_radius);
   float refractT = clamp(d_in / max(refractZonePx, 1.0), 0.0, 1.0);
   float refractBell = 4.0 * refractT * (1.0 - refractT);
-  float offsetAmt = refractBell * u_refraction
-                  + pow(refractBell, 3.0) * u_bevelDepth;
+  float offsetRatio = refractBell * u_refraction
+                    + pow(refractBell, 3.0) * u_bevelDepth;
 
   // Direction: OUTWARD along the SDF gradient (edge normal). Apple-style
   // Liquid Glass models a CONVEX bulge — light from BEHIND the rim is
@@ -257,9 +257,11 @@ void main() {
   // the body are the same blurred landscape, just offset by a few pixels.
   vec2 eN_refract = edgeNormal(v_uv, u_radius);
   vec2 refractDir = eN_refract;
-  // Flip y from v_uv space to texture space.
-  vec2 refractOffsetV = refractDir * offsetAmt;
-  vec2 refractOffset = vec2(refractOffsetV.x, -refractOffsetV.y);
+  float offsetPx = offsetRatio * min(
+    u_bounds.z * u_textureResolution.x,
+    u_bounds.w * u_textureResolution.y
+  );
+  vec2 refractOffset = vec2(refractDir.x, -refractDir.y) * offsetPx / u_textureResolution;
   vec2 sampleUV = mapped + refractOffset;
 
   /* ---- 2. Body sample + rim sample, mixed by distance from rim ------- */

@@ -151,3 +151,60 @@ test, doc update, or explicit parked limitation.
   package-resolution errors caused by our verification workflow.
 - Artifact: Next dev-server log while rebuilding `@glazelab/core`.
 - Owner: Codex.
+
+## 2026-05-01 - Refraction Must Scale With Lens Size, Not Texture Size
+
+- Task: Mode C scroll refraction quality.
+- Mistake: The shader treated public refraction values as direct backdrop UV
+  offsets. On tall document captures, a small fixed pill sampled content many
+  pixels below the lens, so a distant color band appeared too early.
+- Root cause: UV displacement was multiplied by the full backdrop texture
+  dimensions. Mode C document textures can be thousands of pixels tall, while
+  the glass control may only be 56px high.
+- Why existing gates missed it: Element-scroll proof checked that the color
+  changed after scrolling, but did not check whether fixed/sticky glass sampled
+  distant content before it was visually close.
+- New rule: Refraction displacement must be normalized by the lens footprint in
+  texture pixels, not by the complete backdrop texture size.
+- Required future behavior: Fixed/sticky Mode C screenshots must include a case
+  where a saturated band is near but not touching the lens; no color should leak
+  into the glass until the bend zone is visually close.
+- Artifact: `packages/core/src/shader.ts`.
+- Owner: Codex.
+
+## 2026-05-01 - Do Not Poll Heavy Base64 Debug Previews In The Harness
+
+- Task: Mode C browser verification.
+- Mistake: The `/test-mode-c` debug panel polled `debug().backdropPreview` and
+  rendered a large base64 PNG every 500ms.
+- Root cause: The preview was useful for one-time diagnosis, but keeping it in
+  the live harness created avoidable screenshot/browser automation hangs.
+- Why existing gates missed it: Typecheck, lint, and build do not exercise
+  repeated browser screenshot capture with a large changing data URL in the DOM.
+- New rule: Keep heavy captured-backdrop previews available through
+  `handle.debug()`, but do not render or poll them continuously in visual
+  fixtures.
+- Required future behavior: Verification routes should display lightweight text
+  diagnostics by default; one-off image previews belong in saved evidence.
+- Artifact: `/test-mode-c` debug panel.
+- Owner: Codex.
+
+## 2026-05-01 - Preserve Layout When Removing Glass From Mode C Captures
+
+- Task: Mode C sticky/explicit backdrop correctness.
+- Mistake: Glass hosts were excluded from `html2canvas` captures with
+  `ignoreElements`, which removed their layout footprint from the captured
+  texture.
+- Root cause: A sticky glass element still occupies flow space. Removing the
+  host from the cloned capture shifted later content upward by the host height
+  and margin, so color bands appeared in the glass before the live DOM was
+  visually close.
+- Why existing gates missed it: The first refraction fix was verified against
+  the fixed window lens, where removing a fixed host does not affect layout.
+- New rule: Mode C feedback-loop prevention must hide glass hosts in the cloned
+  DOM while preserving layout; only internal glass canvases should be skipped.
+- Required future behavior: Sticky/flow glass screenshots must compare live
+  layout distance against sampled color distance. If the capture removes UI,
+  prove it did not collapse layout.
+- Artifact: `packages/core/src/full/dom-rasterize.ts`.
+- Owner: Codex.

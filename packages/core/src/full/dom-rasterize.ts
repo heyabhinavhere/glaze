@@ -94,12 +94,21 @@ export const rasterizeDOM: DOMRasterizer = async (
         height,
         windowWidth: captureWidth,
         windowHeight: captureHeight,
-        // Fill skipped glass-host holes with the target/body background
-        // instead of transparent black. This keeps Mode C from sampling
-        // premultiplied-alpha voids where the current glass host was
-        // intentionally excluded from the capture.
+        // Fill transparent target areas with the target/body background
+        // instead of transparent black.
         backgroundColor: captureBackgroundColor(target),
         onclone: (doc) => {
+          const cloneView = doc.defaultView;
+          if (cloneView) {
+            doc.querySelectorAll("[data-glaze-host]").forEach((el) => {
+              if (el instanceof cloneView.HTMLElement) {
+                // Preserve flow/sticky layout while removing glass UI from
+                // the sampled backdrop.
+                el.style.visibility = "hidden";
+              }
+            });
+          }
+
           if (viewportOnly) return;
           if (isDocumentCaptureTarget(target)) return;
 
@@ -128,15 +137,12 @@ export const rasterizeDOM: DOMRasterizer = async (
             ancestor = ancestor.parentElement;
           }
         },
-        // Skip our glass canvases. html2canvas's `ignoreElements`
-        // callback runs per-element; we return true for nodes in the
-        // skipNodes set OR any element with data-glaze-canvas /
-        // data-glaze-host (defense-in-depth — the renderer already
-        // passes data-glaze-host elements via skipNodes).
+        // Skip only the internal canvas. Glass hosts are hidden in the cloned
+        // document above so their layout footprint stays intact.
         ignoreElements: (el) => {
-          if (skipNodes.has(el)) return true;
           if (el.hasAttribute("data-glaze-canvas")) return true;
-          if (el.hasAttribute("data-glaze-host")) return true;
+          if (el.hasAttribute("data-glaze-host")) return false;
+          if (skipNodes.has(el)) return true;
           return false;
         },
         // Don't allow taint — strict CORS for cross-origin resources.

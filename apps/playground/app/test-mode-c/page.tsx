@@ -56,7 +56,6 @@ export default function TestModeCPage() {
   const scrollerGlassRef = useRef<HTMLDivElement>(null);
   const handlesRef = useRef<GlassHandle[]>([]);
   const [debugRows, setDebugRows] = useState<string[]>([]);
-  const [scrollerPreview, setScrollerPreview] = useState("");
 
   useEffect(() => {
     let debugInterval: number | null = null;
@@ -114,13 +113,6 @@ export default function TestModeCPage() {
             ].join(" ");
           }),
         );
-
-        const preview = handles[2]?.debug()?.backdropPreview ?? "";
-        if (preview) {
-          setScrollerPreview((current) =>
-            current === preview ? current : preview,
-          );
-        }
       };
 
       readDebug();
@@ -302,22 +294,6 @@ export default function TestModeCPage() {
             >
               {debugRows.join("\n")}
             </pre>
-            {scrollerPreview && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                alt="Element scroll captured backdrop preview"
-                src={scrollerPreview}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  maxHeight: 260,
-                  marginTop: 12,
-                  borderRadius: 8,
-                  objectFit: "cover",
-                  objectPosition: "top",
-                }}
-              />
-            )}
           </section>
         )}
       </main>
