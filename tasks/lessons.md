@@ -208,3 +208,29 @@ test, doc update, or explicit parked limitation.
   prove it did not collapse layout.
 - Artifact: `packages/core/src/full/dom-rasterize.ts`.
 - Owner: Codex.
+
+## 2026-05-01 - Correct Sampling Is Not Liquid Glass Quality
+
+- Task: Mode C liquid-glass visual recovery.
+- Mistake: A bug fix that stopped early distant sampling was presented as a
+  good visual outcome even though the rendered material read as static
+  glassmorphism.
+- Root cause: The shader displacement was changed from full-texture-normalized
+  UVs to lens-footprint pixels, but the existing Mode C harness values
+  (`refraction: 0.0035`, `bevelDepth: 0.006`) now produce less than one pixel of
+  maximum displacement on a 52px pill. That removes visible lensing instead of
+  preserving Apple-like liquid bending.
+- Why existing gates missed it: The gate proved Mode C capture/mapping and zero
+  console errors, but did not require visible dynamic refraction amplitude,
+  scroll video, or designer-level rejection of static glassmorphism.
+- New rule: Do not close rendering work from correctness proof alone. A liquid
+  glass task needs visible bending over high-frequency content and scrolling
+  evidence; if the result looks like a blurred translucent pill, it fails even
+  when logs, build, and coordinate mapping are correct.
+- Required future behavior: Before tuning, calculate the expected maximum
+  displacement in pixels for the tested lens size and config. The visual gate
+  must include motion evidence where content bends through the rim/body during
+  scroll, not only static screenshots.
+- Artifact:
+  `.gstack/evidence/mode-c-2026-05-01/failed-static-glassmorphism-report.png`.
+- Owner: Codex.
