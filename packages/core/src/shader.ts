@@ -214,30 +214,7 @@ void main() {
   vec2 flippedUV = vec2(v_uv.x, 1.0 - v_uv.y);
   vec2 mapped = u_bounds.xy + flippedUV * u_bounds.zw;
 
-  /* ---- 1. Refraction offset (Convex Squircle bell profile) ------------ */
-  // Physical model: a convex lens surface is TANGENT to the flat backing
-  // at the boundary AND tangent to the flat interior top. Max refraction
-  // happens where the surface gradient is steepest — in the MIDDLE of the
-  // bevel zone.
-  //
-  // Our edgeFactor gives 1 at boundary and 0 at interior. We turn that
-  // into a bell curve that is 0 at both ends and peaks at edge=0.5:
-  //    bell = 4 * edge * (1 - edge)    → parabola, peak value 1.0
-  // This guarantees continuity at the boundary (no content jump) AND
-  // at the interior (no inner ring artifact).
-  //
-  // Two terms compose the amount:
-  //    1. bell * refraction        — wide gentle bend across the bevel
-  //    2. pow(bell, 3) * bevelDepth — sharper concentrated bend at the
-  //       steepest part of the curve (middle of bevel)
-  // Refraction uses its own ZONE (u_bendZone, fraction of the glass's
-  // smaller dimension) that is INDEPENDENT of bevelWidth. bevelWidth only
-  // controls the thin rim-lighting band. This decoupling is critical: the
-  // user can have a razor-thin lit rim (bevelWidth=2) while still getting
-  // visible "liquid bending" across a 30-50px zone.
-  //
-  // The bell profile ensures continuity: zero refraction at the boundary
-  // (no content jump) and at the interior (center stays clear).
+  /* ---- 1. Refraction offset: bell curve, zero at edge and interior ---- */
   float refractZonePx = u_bendZone * min(u_resolution.x, u_resolution.y);
   vec2 refract_p_px = (v_uv - 0.5) * u_resolution;
   vec2 refract_b_px = 0.5 * u_resolution;
@@ -247,20 +224,15 @@ void main() {
   float offsetRatio = refractBell * u_refraction
                     + pow(refractBell, 3.0) * u_bevelDepth;
 
-  // Direction: OUTWARD along the SDF gradient (edge normal). Apple-style
-  // Liquid Glass models a CONVEX bulge — light from BEHIND the rim is
-  // refracted toward the viewer, so each rim pixel shows EXTERIOR content
-  // pulled inward through the curve. At the left rim eN points -x, so we
-  // sample from -x (further left in the texture, where the actual exterior
-  // sits). Without this, the rim just samples panel-interior content with
-  // a small shift — the displacement is invisible because the source and
-  // the body are the same blurred landscape, just offset by a few pixels.
   vec2 eN_refract = edgeNormal(v_uv, u_radius);
   vec2 refractDir = eN_refract;
-  float offsetPx = offsetRatio * min(
+  float lensMinPx = min(
     u_bounds.z * u_textureResolution.x,
     u_bounds.w * u_textureResolution.y
   );
+  float rawOffsetPx = offsetRatio * lensMinPx * 40.0;
+  float maxOffsetPx = max(1.0, refractZonePx * 0.85);
+  float offsetPx = maxOffsetPx * (1.0 - exp(-rawOffsetPx / maxOffsetPx));
   vec2 refractOffset = vec2(refractDir.x, -refractDir.y) * offsetPx / u_textureResolution;
   vec2 sampleUV = mapped + refractOffset;
 

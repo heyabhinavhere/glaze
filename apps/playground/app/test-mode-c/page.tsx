@@ -25,14 +25,14 @@ declare global {
 
 const MODE_C_GLASS = {
   radius: 28,
-  frost: 0.3,
-  tint: [1, 1, 1, 0.16],
-  refraction: 0.0035,
-  bevelDepth: 0.006,
+  frost: 0.18,
+  tint: [1, 1, 1, 0.12],
+  refraction: 0.008,
+  bevelDepth: 0.018,
   bevelWidth: 1.5,
-  bendZone: 14,
-  chromatic: 0.008,
-  rimIntensity: 0.26,
+  bendZone: 28,
+  chromatic: 0.035,
+  rimIntensity: 0.3,
   specularSize: 0,
   specularOpacity: 0,
 } satisfies GlassConfigUpdate;

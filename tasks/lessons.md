@@ -234,3 +234,23 @@ test, doc update, or explicit parked limitation.
 - Artifact:
   `.gstack/evidence/mode-c-2026-05-01/failed-static-glassmorphism-report.png`.
 - Owner: Codex.
+
+## 2026-05-01 - Shader Unit Changes Need Soft Visual Recalibration
+
+- Task: Restore liquid bending after Mode C sampling fix.
+- Mistake: The first attempt to restore displacement used a hard cap, which
+  made high-contrast text collapse into a harsh rim line.
+- Root cause: Refractive displacement needs a local maximum, but a hard
+  `min()` clamp flattens the peak of the bend curve and creates an artificial
+  ring. A soft saturation curve preserves continuity while still preventing
+  distant content from being sampled too early.
+- Why existing gates missed it: Static screenshots caught that refraction was
+  visible again, but the artifact only became obvious when inspecting text
+  crossing the rim.
+- New rule: When changing shader units, calculate pixel displacement and use a
+  continuous limiting function for optical caps. Hard caps in the visible bend
+  path need designer review before they are accepted.
+- Required future behavior: Evidence must include high-contrast text or grid
+  content crossing the rim so hard-ring artifacts are visible.
+- Artifact: `packages/core/src/shader.ts`.
+- Owner: Codex.
