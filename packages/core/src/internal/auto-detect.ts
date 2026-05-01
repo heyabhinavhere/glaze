@@ -40,14 +40,26 @@ export interface AutoDetectResult {
     | HTMLCanvasElement
     | null;
   backdropAnchor: HTMLElement | null;
+  /** Mode C target — set when mode === "C-dom". The element whose
+   *  DOM subtree should be rasterized. createGlass invokes the
+   *  registered DOMRasterizer against this element. */
+  domTarget?: HTMLElement;
   /** Diagnostic — what mode was chosen. Useful for the dev-mode debug
    *  API in sub-task 7 and for the auto-detection corpus tests. */
-  mode: "A-element" | "A-bg-image" | "none";
+  mode: "A-element" | "A-bg-image" | "C-dom" | "none";
 }
 
 /** Run auto-detection against the host. SSR-safe: returns no-match if
- *  window/document aren't available. */
-export function autoDetectBackdrop(host: HTMLElement): AutoDetectResult {
+ *  window/document aren't available.
+ *
+ *  When `modeCAvailable` is true (i.e., the /full entry has registered
+ *  a DOMRasterizer), the function falls through Phase 3 to find a
+ *  Mode C target (nearest scroll container or body) when no media
+ *  element / CSS bg-image matched. */
+export function autoDetectBackdrop(
+  host: HTMLElement,
+  modeCAvailable: boolean = false,
+): AutoDetectResult {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return { backdrop: null, backdropAnchor: null, mode: "none" };
   }
@@ -104,6 +116,37 @@ export function autoDetectBackdrop(host: HTMLElement): AutoDetectResult {
         mode: "A-bg-image",
       };
     }
+  }
+
+  // ---- Phase 3: Mode C fallback (when /full entry's rasterizer is
+  // registered). Find nearest scroll container — that's the canonical
+  // "fixed glass over scrolling DOM content" pattern. Otherwise fall
+  // back to body. The element returned becomes both the rasterization
+  // target AND the backdrop anchor (lens bounds = lens.rect / target.rect).
+  if (modeCAvailable) {
+    let scrollAncestor: HTMLElement | null = null;
+    let candidate: HTMLElement | null = host.parentElement;
+    while (candidate && candidate !== document.documentElement) {
+      const cs = getComputedStyle(candidate);
+      const yScrollable =
+        (cs.overflowY === "auto" || cs.overflowY === "scroll") &&
+        candidate.scrollHeight > candidate.clientHeight;
+      const xScrollable =
+        (cs.overflowX === "auto" || cs.overflowX === "scroll") &&
+        candidate.scrollWidth > candidate.clientWidth;
+      if (yScrollable || xScrollable) {
+        scrollAncestor = candidate;
+        break;
+      }
+      candidate = candidate.parentElement;
+    }
+    const target = scrollAncestor ?? document.body;
+    return {
+      backdrop: null, // populated by createGlass after rasterization
+      backdropAnchor: target,
+      domTarget: target,
+      mode: "C-dom",
+    };
   }
 
   return { backdrop: null, backdropAnchor: null, mode: "none" };

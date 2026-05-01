@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { playTick } from "@/lib/tick";
 
@@ -44,9 +44,11 @@ export function PillSlider({
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   // Tracks the most recent value emitted by either props or user interaction.
-  // Updated every render so ticks only fire on genuine changes.
   const lastEmitted = useRef(value);
-  lastEmitted.current = value;
+
+  useLayoutEffect(() => {
+    lastEmitted.current = value;
+  }, [value]);
 
   const clamp = (v: number) => Math.min(Math.max(v, min), max);
   const snap = (v: number) =>

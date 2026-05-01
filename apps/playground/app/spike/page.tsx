@@ -64,7 +64,9 @@ export default function SpikePage() {
        the library will use for arbitrary DOM backdrops in v1.0. */
   useEffect(() => {
     let cancelled = false;
-    setBackdropSource(null);
+    queueMicrotask(() => {
+      if (!cancelled) setBackdropSource(null);
+    });
 
     if (backdrop.kind === "image" && backdrop.src) {
       const img = new Image();
@@ -80,7 +82,6 @@ export default function SpikePage() {
           }
         })
         .catch((e) => {
-          // eslint-disable-next-line no-console
           console.warn("[spike] image decode failed:", e);
         });
       return () => {
@@ -138,7 +139,6 @@ export default function SpikePage() {
           setBackdropSource(c);
           setLive(false);
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.warn("[spike] scroll capture failed:", e);
         }
       };

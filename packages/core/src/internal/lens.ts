@@ -25,6 +25,17 @@ import type { LensGLResources } from "./lens-gl";
 
 let lensIdCounter = 0;
 
+export interface ModeCCaptureState {
+  target: HTMLElement;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  kind: "full" | "windowed";
+  reason: string | null;
+  lastError: string | null;
+}
+
 export class Lens {
   readonly id: number;
   readonly host: HTMLElement;
@@ -58,6 +69,22 @@ export class Lens {
    *  - "live-video":  re-upload on requestVideoFrameCallback fires
    *  - "live-canvas": re-upload every render frame (no native event) */
   backdropKind: "static" | "live-video" | "live-canvas" | null = null;
+
+  /** Public/debug mode classification. */
+  backdropMode: "A" | "B" | "C" | null = null;
+
+  /** Mode C capture metadata. The renderer uses this to map the lens's
+   *  viewport rect into the captured scroll-context texture, including
+   *  element scroll offsets and windowed-capture offsets. */
+  modeC: ModeCCaptureState | null = null;
+
+  /** Development diagnostics surfaced through handle.debug(). */
+  lastError: string | null = null;
+  lastFrame: { capture: number; render: number; total: number } = {
+    capture: 0,
+    render: 0,
+    total: 0,
+  };
 
   /** Set by the video frame callback when a new frame is decoded.
    *  Cleared by the renderer after re-upload. Live-canvas doesn't
@@ -163,8 +190,8 @@ export class Lens {
     host.setAttribute("data-glaze-host", "");
 
     // Initial rect snapshot.
-    const r = host.getBoundingClientRect();
-    this.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+    this.rect = { x: 0, y: 0, w: 0, h: 0 };
+    this.refreshRect();
 
     // Resize tracking. Static-positioned lenses get rect updates only
     // from this; sticky/fixed need the additional scroll listener that
@@ -270,13 +297,19 @@ export class Lens {
     }
   }
 
-  /** Re-read the host's rect. Triggered by ResizeObserver and (sub-
-   *  task 3d) by scroll for sticky/fixed lenses. */
+  /** Re-read the host's rect. Triggered by ResizeObserver. */
   private handleResize = (): void => {
     if (this.destroyed) return;
+    this.refreshRect();
+  };
+
+  /** Re-read the host's viewport rect. SharedRenderer calls this for
+   *  scroll-sensitive lenses because ResizeObserver does not fire when
+   *  scrolling changes getBoundingClientRect(). */
+  refreshRect(): void {
     const r = this.host.getBoundingClientRect();
     this.rect = { x: r.left, y: r.top, w: r.width, h: r.height };
-  };
+  }
 
   /** Blit a rendered ImageBitmap (from the offscreen GL output) onto
    *  this lens's visible 2D canvas. Resizes the canvas backing store

@@ -4,7 +4,10 @@
   "description": "WebGL liquid-glass primitive for the web. Default entry: Mode A static-image / Mode B live-element / auto-detection. /full entry adds Mode C DOM rasterization.",
   "license": "MIT",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/full.js",
+    "./dist/full.cjs"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,6 +34,9 @@
     "size": "size-limit",
     "lint": "echo 'lint: TODO (eslint config pending)'"
   },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^11.1.6",
     "size-limit": "^11.1.6",
@@ -46,7 +52,8 @@
     {
       "name": "@glazelab/core/full",
       "path": "dist/full.js",
-      "limit": "22 KB"
+      "limit": "22 KB",
+      "ignore": ["html2canvas"]
     }
   ],
   "publishConfig": {
