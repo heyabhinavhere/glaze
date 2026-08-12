@@ -80,6 +80,12 @@
   box-shadow: inset 0 0 0 1px rgba(211, 241, 255, 0.1);
 }
 
+.modeBar button:disabled {
+  color: #66778b;
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
 .modeBar button:focus-visible,
 .sceneChooser button:focus-visible,
 .playButton:focus-visible {
@@ -132,48 +138,6 @@
   background: #13233f;
 }
 
-.ownedPattern,
-.ownedPatternLens {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background:
-    linear-gradient(125deg, rgba(2, 14, 31, 0.22), rgba(79, 201, 189, 0.13)),
-    repeating-linear-gradient(105deg, #153557 0 22px, #e17672 22px 42px, #f0c15f 42px 55px, #28556c 55px 82px);
-}
-
-.ownedPatternLens {
-  width: 240px;
-  height: 56px;
-  background-position: 51% 48%;
-  background-size: 900px 520px;
-}
-
-.grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mix-blend-mode: soft-light;
-}
-
-.coordinateA,
-.coordinateB,
-.domMark {
-  position: absolute;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 5px rgba(0,0,0,.45);
-}
-
-.coordinateA { top: 22%; left: 7%; font: 700 12px ui-monospace, monospace; }
-.coordinateB { bottom: 14%; right: 7%; font: 600 10px ui-monospace, monospace; letter-spacing: .08em; }
-.domMark { top: 34%; left: 46%; font: 750 clamp(60px, 12vw, 138px)/1 ui-sans-serif, system-ui; letter-spacing: -.08em; opacity: .22; }
-.ownedPatternLens .coordinateA { top: 8px; left: 8px; font-size: 7px; }
-.ownedPatternLens .coordinateB { bottom: 7px; right: 8px; font-size: 6px; }
-.ownedPatternLens .domMark { top: 4px; left: 82px; font-size: 44px; opacity: .26; }
-
 .sourceMedia {
   position: absolute;
   inset: 0;
@@ -211,10 +175,8 @@
   --glaze-touch-y: 50%;
   --glaze-pull-x: 0px;
   --glaze-pull-y: 0px;
-  background: rgba(205, 232, 244, 0.045);
-  box-shadow:
-    0 17px 38px rgba(1, 8, 20, .25),
-    0 3px 8px rgba(1, 8, 20, .18);
+  background: transparent;
+  box-shadow: none;
   transition:
     transform 380ms cubic-bezier(.16, 1, .3, 1),
     border-radius 380ms cubic-bezier(.16, 1, .3, 1),
@@ -226,9 +188,7 @@
     translate(calc(-50% + var(--glaze-pull-x)), calc(-50% + var(--glaze-pull-y)))
     scale(1.022, .975);
   border-radius: 26px !important;
-  box-shadow:
-    0 21px 42px rgba(1, 8, 20, .28),
-    0 5px 12px rgba(1, 8, 20, .2);
+  box-shadow: none;
 }
 
 .glassSurface[data-pressed="true"] {
@@ -236,15 +196,12 @@
     translate(calc(-50% + var(--glaze-pull-x)), calc(-50% + var(--glaze-pull-y)))
     scale(1.038, .925);
   border-radius: 23px !important;
-  box-shadow:
-    0 13px 28px rgba(1, 8, 20, .24),
-    0 2px 5px rgba(1, 8, 20, .18);
+  box-shadow: none;
 }
 
 .fallbackLayer,
-.ownedLensSource,
 .outputCanvas,
-.glassFinish {
+.fallbackFinish {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -258,15 +215,33 @@
   backdrop-filter: blur(9px) saturate(.94) brightness(1.04);
 }
 
-.ownedLensSource {
-  z-index: 1;
-  transform-origin: var(--glaze-touch-x) var(--glaze-touch-y);
-  transition: transform 420ms cubic-bezier(.16, 1, .3, 1);
+.glassSurface[data-renderer="webgl"] .fallbackLayer {
+  display: none;
 }
+
+.glassSurface[data-renderer="css-fallback"] {
+  background: rgba(205, 232, 244, 0.045);
+  box-shadow:
+    0 17px 38px rgba(1, 8, 20, .25),
+    0 3px 8px rgba(1, 8, 20, .18);
+}
+
+.glassSurface[data-renderer="css-fallback"][data-active="true"] {
+  box-shadow:
+    0 21px 42px rgba(1, 8, 20, .28),
+    0 5px 12px rgba(1, 8, 20, .2);
+}
+
+.glassSurface[data-renderer="css-fallback"][data-pressed="true"] {
+  box-shadow:
+    0 13px 28px rgba(1, 8, 20, .24),
+    0 2px 5px rgba(1, 8, 20, .18);
+}
+
 .outputCanvas { z-index: 1; display: block; opacity: 0; pointer-events: none; }
 .outputCanvas[data-active="true"] { opacity: 1; }
 
-.glassFinish {
+.fallbackFinish {
   z-index: 2;
   pointer-events: none;
   border: 1px solid rgba(235, 252, 255, 0.38);
@@ -283,19 +258,12 @@
   transition: filter 260ms ease;
 }
 
-.glassSurface[data-active="true"] .glassFinish {
+.glassSurface[data-active="true"] .fallbackFinish {
   filter: brightness(1.16);
 }
 
-.glassSurface[data-pressed="true"] .glassFinish {
+.glassSurface[data-pressed="true"] .fallbackFinish {
   filter: brightness(1.27) saturate(1.08);
-}
-
-.filterDefinition {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
 }
 
 .transportControls {
@@ -320,6 +288,22 @@
   color: white;
   font: 700 13px system-ui;
   cursor: pointer;
+}
+
+.glassSurface[data-renderer="webgl"] {
+  background: transparent;
+  box-shadow: none;
+  transition-property: transform, border-radius;
+}
+
+.glassSurface[data-renderer="webgl"][data-active="true"],
+.glassSurface[data-renderer="webgl"][data-pressed="true"] {
+  box-shadow: none;
+}
+
+.glassSurface[data-renderer="webgl"] .playButton {
+  border: 0;
+  background: rgba(4, 20, 36, .24);
 }
 
 .track { height: 3px; flex: 1; overflow: hidden; border-radius: 2px; background: rgba(255,255,255,.3); }
@@ -367,7 +351,7 @@
 .contract code { grid-column: 1 / -1; color: #6f849d; font-size: 10px; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) {
-  .track span, .glassSurface, .ownedLensSource, .glassFinish { transition: none; }
+  .track span, .glassSurface, .fallbackFinish { transition: none; }
   .glassSurface[data-active="true"],
   .glassSurface[data-pressed="true"] {
     transform: translate(-50%, -50%);
@@ -388,7 +372,8 @@
 @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
   .glassSurface { background: #182b3e; }
   .fallbackLayer { background: #182b3e; backdrop-filter: none; }
-  .ownedLensSource, .outputCanvas { display: none; }
+  .glassSurface[data-renderer="webgl"] .fallbackLayer { display: block; }
+  .outputCanvas { display: none; }
 }
 
 @media (max-width: 700px) {

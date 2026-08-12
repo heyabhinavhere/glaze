@@ -1,28 +1,21 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   generateM1DisplacementMap,
   hashDisplacementMap,
-  type M1DisplacementMap,
 } from "../_lib/displacement";
 import type { M1Material } from "../_lib/material";
-import { displacementMapDataUrl } from "../_lib/png";
 import {
   getActiveM1RendererCount,
   M1WebGLRenderer,
+  type M1LightingMeasurement,
   type M1RendererDiagnostics,
 } from "../_lib/webgl-renderer";
 import styles from "../m1.module.css";
 
-type M1Mode = "owned-dom" | "canvas" | "video" | "fallback";
-type RendererKind = "svg-dom" | "webgl" | "css-fallback";
+type M1Mode = "canvas" | "video" | "fallback";
+type RendererKind = "webgl" | "css-fallback";
 type M1CanvasScene = "prism" | "topography" | "nocturne";
 
 interface M1GlobalDiagnostics {
@@ -41,6 +34,11 @@ interface M1GlobalDiagnostics {
   forceContextLoss: () => void;
   setForcedDpr: (dpr: number | null) => void;
   resetLongTasks: () => void;
+  setLightAngleDeg: (angleDeg: number) => void;
+  measureLighting: (sourceProbe?: string) => M1LightingMeasurement;
+  setSourceProbe: (
+    probe: "scene" | "bright" | "dark" | "high-frequency",
+  ) => void;
 }
 
 declare global {
@@ -53,8 +51,7 @@ const GLASS_WIDTH = 240;
 const GLASS_HEIGHT = 56;
 
 const MODES: readonly { id: M1Mode; label: string }[] = [
-  { id: "owned-dom", label: "Owned DOM" },
-  { id: "canvas", label: "Canvas" },
+  { id: "canvas", label: "Canvas · Stage A accepted" },
   { id: "video", label: "Video" },
   { id: "fallback", label: "Fallback" },
 ];
@@ -84,10 +81,6 @@ const SCENE_COPY: Record<
   nocturne: {
     eyebrow: "LOW-LIGHT STUDY",
     title: "Highlights should travel through the material.",
-  },
-  "owned-dom": {
-    eyebrow: "OWNED DOM STUDY",
-    title: "Semantic content stays live beneath the lens.",
   },
   video: {
     eyebrow: "TEMPORAL STUDY",
@@ -234,76 +227,71 @@ function drawCanvasFixture(
 
 }
 
-function OwnedPattern({ lens = false }: { lens?: boolean }) {
+function drawSourceProbe(
+  canvas: HTMLCanvasElement,
+  probe: "bright" | "dark" | "high-frequency",
+): void {
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  if (canvas.width === 0 || canvas.height === 0) {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(rect.width));
+    canvas.height = Math.max(1, Math.round(rect.height));
+  }
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  if (probe === "bright") {
+    context.fillStyle = "rgb(224, 228, 232)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  } else if (probe === "dark") {
+    context.fillStyle = "rgb(12, 16, 24)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  } else {
+    const cell = 6;
+    for (let y = 0; y < canvas.height; y += cell) {
+      for (let x = 0; x < canvas.width; x += cell) {
+        context.fillStyle =
+          (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0
+            ? "rgb(236, 241, 244)"
+            : "rgb(10, 18, 30)";
+        context.fillRect(x, y, cell, cell);
+      }
+    }
+  }
+}
+
+function TransportControls({
+  playing,
+  onToggle,
+}: {
+  playing: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className={lens ? styles.ownedPatternLens : styles.ownedPattern}>
-      <div className={styles.grid} />
-      <span className={styles.coordinateA}>48.8° N</span>
-      <span className={styles.coordinateB}>REFRACTION / OWNED SOURCE</span>
-      <span className={styles.domMark}>DOM</span>
+    <div className={styles.transportControls}>
+      <button
+        type="button"
+        className={styles.playButton}
+        data-testid="play-toggle"
+        aria-label={playing ? "Pause source" : "Play source"}
+        aria-pressed={playing}
+        onClick={onToggle}
+      >
+        {playing ? "Ⅱ" : "▶"}
+      </button>
+      <div className={styles.track} aria-hidden="true">
+        <span style={{ width: playing ? "62%" : "38%" }} />
+      </div>
+      <span className={styles.time}>{playing ? "0:18" : "0:11"}</span>
     </div>
   );
 }
 
-function M1SvgFilter({
-  id,
-  map,
-  mapUrl,
-  material,
-}: {
-  id: string;
-  map: M1DisplacementMap;
-  mapUrl: string;
-  material: M1Material;
-}) {
-  return (
-    <svg className={styles.filterDefinition} aria-hidden="true">
-      <defs>
-        <filter
-          id={id}
-          x="-20"
-          y="-20"
-          width={GLASS_WIDTH + 40}
-          height={GLASS_HEIGHT + 40}
-          filterUnits="userSpaceOnUse"
-          primitiveUnits="userSpaceOnUse"
-          colorInterpolationFilters="sRGB"
-        >
-          <feGaussianBlur
-            in="SourceGraphic"
-            stdDeviation={material.optics.frostPx / 2}
-            result="frosted"
-          />
-          <feImage
-            href={mapUrl}
-            x="0"
-            y="0"
-            width={GLASS_WIDTH}
-            height={GLASS_HEIGHT}
-            preserveAspectRatio="none"
-            result="glaze-map"
-          />
-          <feDisplacementMap
-            in="frosted"
-            in2="glaze-map"
-            scale={material.optics.displacementPx * 2}
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-        </filter>
-      </defs>
-      <metadata data-map-width={map.width} data-map-height={map.height} />
-    </svg>
-  );
-}
-
 export function M1Experiment({ material }: { material: M1Material }) {
-  const [mode, setMode] = useState<M1Mode>("owned-dom");
+  const [mode, setMode] = useState<M1Mode>("canvas");
   const [canvasScene, setCanvasScene] = useState<M1CanvasScene>("prism");
   const [playing, setPlaying] = useState(false);
   const [browserDpr, setBrowserDpr] = useState(1);
   const [forcedDpr, setForcedDpr] = useState<number | null>(null);
-  const [mapUrl, setMapUrl] = useState("");
   const [mapHash, setMapHash] = useState("");
   const [rendererKind, setRendererKind] = useState<RendererKind>("css-fallback");
   const [fallbackReason, setFallbackReason] = useState<string | null>(
@@ -324,8 +312,6 @@ export function M1Experiment({ material }: { material: M1Material }) {
   const outputCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<M1WebGLRenderer | null>(null);
   const longTasksRef = useRef(0);
-  const rawId = useId();
-  const filterId = `m1-filter-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const effectiveDpr = forcedDpr ?? browserDpr;
   const reviewCopy = SCENE_COPY[mode === "canvas" ? canvasScene : mode];
   const canvasSceneLabel =
@@ -365,10 +351,6 @@ export function M1Experiment({ material }: { material: M1Material }) {
 
   useEffect(() => {
     let cancelled = false;
-    const encodedMap = displacementMapDataUrl(map);
-    queueMicrotask(() => {
-      if (!cancelled) setMapUrl(encodedMap);
-    });
     void hashDisplacementMap(map).then((hash) => {
       if (!cancelled) setMapHash(hash);
     });
@@ -424,16 +406,6 @@ export function M1Experiment({ material }: { material: M1Material }) {
     rendererRef.current?.destroy();
     rendererRef.current = null;
 
-    if (mode === "owned-dom") {
-      queueMicrotask(() => {
-        if (cancelled) return;
-        setRendererKind(mapUrl ? "svg-dom" : "css-fallback");
-        setFallbackReason(mapUrl ? null : "map-not-encoded");
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
     if (mode === "fallback") {
       queueMicrotask(() => {
         if (cancelled) return;
@@ -494,7 +466,7 @@ export function M1Experiment({ material }: { material: M1Material }) {
       rendererRef.current?.destroy();
       rendererRef.current = null;
     };
-  }, [map, mapUrl, material, mode, videoReady]);
+  }, [map, material, mode, videoReady]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -524,8 +496,36 @@ export function M1Experiment({ material }: { material: M1Material }) {
         longTasksRef.current = 0;
         rendererRef.current?.resetPerformanceMeasurements();
       },
+      setLightAngleDeg: (angleDeg) => {
+        rendererRef.current?.setLightAngleDeg(angleDeg);
+      },
+      measureLighting: (sourceProbe = `${mode}:${canvasScene}`) => {
+        const renderer = rendererRef.current;
+        if (!renderer) throw new Error("WebGL renderer is unavailable.");
+        return renderer.measureLighting(sourceProbe);
+      },
+      setSourceProbe: (probe) => {
+        const canvas = sourceCanvasRef.current;
+        if (!canvas || mode !== "canvas") {
+          throw new Error("Source probes require the canvas renderer.");
+        }
+        if (probe === "scene") {
+          drawCanvasFixture(canvas, 1_600, canvasScene);
+        } else {
+          drawSourceProbe(canvas, probe);
+        }
+        rendererRef.current?.draw();
+      },
     };
-  }, [fallbackReason, map, mapHash, mode, rendererKind, diagnosticTick]);
+  }, [
+    canvasScene,
+    fallbackReason,
+    map,
+    mapHash,
+    mode,
+    rendererKind,
+    diagnosticTick,
+  ]);
 
   useEffect(() => {
     rendererRef.current?.setInteraction(
@@ -550,13 +550,21 @@ export function M1Experiment({ material }: { material: M1Material }) {
           <h1>Rendering foundation, under test.</h1>
         </div>
         <p>
-          One material across six stress scenes. Move, press, and play the real
-          control. No page capture and no scene-specific material tuning.
+          Accepted WebGL material for explicit canvas and video sources. Real
+          semantic controls remain ordinary DOM overlays.
         </p>
       </header>
 
       <section className={styles.experiment} aria-labelledby="experiment-title">
         <div className={styles.modeBar} role="group" aria-label="Source renderer">
+          <button
+            type="button"
+            data-testid="mode-owned-dom"
+            aria-pressed="false"
+            disabled
+          >
+            Owned DOM · SVG parity rejected / reframe required
+          </button>
           {MODES.map((item) => (
             <button
               key={item.id}
@@ -606,8 +614,18 @@ export function M1Experiment({ material }: { material: M1Material }) {
           data-mode={mode}
           data-scene={canvasScene}
           data-renderer={rendererKind}
+          data-source-luminance={
+            mode === "canvas"
+              ? canvasScene === "nocturne"
+                ? "dark"
+                : canvasScene === "prism"
+                  ? "high-frequency"
+                  : "mid"
+              : mode === "video"
+                ? "natural"
+                : "fallback"
+          }
         >
-          <OwnedPattern />
           <canvas
             ref={sourceCanvasRef}
             className={styles.sourceMedia}
@@ -643,6 +661,7 @@ export function M1Experiment({ material }: { material: M1Material }) {
             data-testid="glass-surface"
             data-active={interaction.active}
             data-pressed={interaction.pressed}
+            data-renderer={rendererKind}
             style={{
               width: GLASS_WIDTH,
               height: GLASS_HEIGHT,
@@ -691,28 +710,6 @@ export function M1Experiment({ material }: { material: M1Material }) {
             }}
           >
             <div className={styles.fallbackLayer} aria-hidden="true" />
-            {mode === "owned-dom" && mapUrl ? (
-              <>
-                <M1SvgFilter
-                  id={filterId}
-                  map={map}
-                  mapUrl={mapUrl}
-                  material={material}
-                />
-                <div
-                  className={styles.ownedLensSource}
-                  style={{
-                    filter: `url(#${filterId})`,
-                    transform: interaction.active
-                      ? `translate(${(interaction.x - 0.5) * 6}px, ${(interaction.y - 0.5) * 4}px) scale(${interaction.pressed ? 1.055 : 1.032})`
-                      : "translate(0, 0) scale(1)",
-                  }}
-                  aria-hidden="true"
-                >
-                  <OwnedPattern lens />
-                </div>
-              </>
-            ) : null}
             {(mode === "canvas" || mode === "video") &&
             rendererKind === "webgl" ? (
               <canvas
@@ -731,31 +728,19 @@ export function M1Experiment({ material }: { material: M1Material }) {
                 role="presentation"
               />
             ) : null}
-            <div className={styles.glassFinish} aria-hidden="true" />
-            <div className={styles.transportControls}>
-              <button
-                type="button"
-                className={styles.playButton}
-                data-testid="play-toggle"
-                aria-label={playing ? "Pause source" : "Play source"}
-                aria-pressed={playing}
-                onClick={() => setPlaying((value) => !value)}
-              >
-                {playing ? "Ⅱ" : "▶"}
-              </button>
-              <div className={styles.track} aria-hidden="true">
-                <span style={{ width: playing ? "62%" : "38%" }} />
-              </div>
-              <span className={styles.time}>{playing ? "0:18" : "0:11"}</span>
-            </div>
+            {rendererKind === "css-fallback" ? (
+              <div className={styles.fallbackFinish} aria-hidden="true" />
+            ) : null}
+            <TransportControls
+              playing={playing}
+              onToggle={() => setPlaying((value) => !value)}
+            />
           </div>
 
           <div className={styles.sourceBadge}>
-            {mode === "owned-dom"
-              ? "LIVE DOM"
-              : mode === "canvas"
-                ? `CANVAS · ${canvasSceneLabel.toUpperCase()}`
-                : mode.toUpperCase()}
+            {mode === "canvas"
+              ? `CANVAS · ${canvasSceneLabel.toUpperCase()}`
+              : mode.toUpperCase()}
           </div>
         </div>
 
@@ -784,7 +769,8 @@ export function M1Experiment({ material }: { material: M1Material }) {
       <section className={styles.contract}>
         <h2 id="experiment-title">What this route can prove</h2>
         <ul>
-          <li>SVG and WebGL consume the same deterministic RGBA map.</li>
+          <li>Canvas/WebGL is the accepted Stage A material reference.</li>
+          <li>Same-material owned-DOM SVG parity is rejected and disabled.</li>
           <li>The interactive control remains ordinary semantic DOM.</li>
           <li>Static and paused sources stop rendering after they settle.</li>
           <li>Unsupported and lost contexts remain legible through CSS.</li>

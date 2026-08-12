@@ -6,15 +6,19 @@ Checkpoint branch: `aj/glaze-m1-research-spike`
 
 ## Verdict
 
-**MECHANICS PASS / VISUAL AND MATERIAL-LIGHTING BLOCKED: the private source-aware spike establishes useful determinism, lifecycle, fallback, and browser-automation evidence, but it has not proved Glaze's visual promise or a coherent renderer-native lighting model across SVG and WebGL. M1 is not accepted and Milestone 2 remains blocked.**
+**WEBGL STAGE A ACCEPTED / SAME-MATERIAL SVG PARITY NO-GO / ARCHITECTURE REFRAME REQUIRED.** The private source-aware spike proves the explicit-source WebGL material, determinism, lifecycle, fallback, and browser-automation boundary. It disproves the proposed same-material owned-DOM SVG parity contract. M1.1 and M1 are closed as NO-GO for renderer parity, and Milestone 2 remains blocked pending explicit acceptance of `docs/architecture/RENDERING-REFRAME.md`.
 
-The current implementation is a preserved research checkpoint, not an approved material foundation. The owner accepted that it improved on the legacy baseline, but correctly rejected the remaining outlined appearance and the subsequent CSS-glow correction. The only permitted continuation is the bounded M1.1 renderer-native lighting proof defined below.
+> **M1.1 Stage A decision — 2026-08-12:** The orchestrator explicitly accepted focused revision 1 as the locked WebGL material-lighting reference (`m1.1-continuous-capsule-lighting-r1`, material `m1-transport-controls`).
+>
+> **Stage B result — 2026-08-12:** **M1.1 NO-GO / REFRAME.** The honest owned-subtree SVG implementation preserved real semantics and used the accepted map/material, but original-resolution review rejected its opaque bright slab, continuous perimeter reading, high-frequency endpoint pinching, and material incoherence with WebGL. Correcting those defects requires a prohibited backdrop/source input or renderer-specific/shared-WebGL retuning. See `docs/gates/M1.1-STAGE-B-REPORT.md`.
 
-The experiment did not require arbitrary DOM capture, `html2canvas`, automatic source detection, renderer-specific material values, a workbench, package publication, or a public API change. One material and one deterministic RGBA displacement map power:
+The cleaned runtime preserves only the accepted WebGL Stage A implementation. The rejected Stage B SVG implementation is retained only in its report and ignored evidence directory; `/m1` exposes a disabled **SVG parity rejected / reframe required** state rather than a selectable candidate.
 
-- SVG displacement over explicitly owned/duplicated DOM content.
+The accepted implementation does not require arbitrary DOM capture, `html2canvas`, automatic source detection, renderer-specific scene values, a workbench, package publication, or a public API change. One private material and one deterministic RGBA surface field power:
+
 - WebGL2 sampling from explicit canvas and video elements.
 - A visible CSS fallback with a machine-readable reason.
+- Ordinary semantic DOM controls layered independently of the decorative renderer.
 
 The implementation remains private to the `/m1` Next.js route. It does not modify or legitimize the legacy `@glazelab/core` APIs.
 
@@ -33,7 +37,7 @@ Baseline screenshots and hashes are under `.gstack/evidence/gate-1/baseline/scre
 
 ## Implemented vertical slice
 
-`/m1` is a statically prerendered Next.js 16 route with a Server Component page and a narrow Client Component experiment. Its one 240×56 accessible transport control switches between explicit owned-DOM, canvas, video, and forced-fallback modes.
+`/m1` is a statically prerendered Next.js 16 route with a Server Component page and a narrow Client Component experiment. Its one 240×56 accessible transport control switches between explicit canvas, video, and forced-fallback modes. Owned DOM is a disabled research outcome, not a renderer mode.
 
 The provisional material is deliberately private and small:
 
@@ -42,9 +46,9 @@ The provisional material is deliberately private and small:
 - Tint, tint opacity, rim intensity, and light angle.
 - A DPR cap of 2.
 
-The displacement generator produces neutral RG values outside the rounded shape and at the settled interior, signed outward vectors within the bevel, and a B-channel convex thickness field. SVG reads the RG vector and WebGL reads RG plus thickness from the same encoded bytes. Both paths use the same CSS-pixel displacement equation.
+The displacement generator produces neutral RG values outside the rounded shape and at the settled interior, signed outward vectors from one continuous capsule field, and a B-channel convex thickness field. WebGL reads RG plus thickness from the encoded bytes for refraction, lighting, occlusion, tint, and transmission. The rejected SVG use of this field is not part of the runtime contract.
 
-### Completed visual revision — not accepted
+### Accepted WebGL visual revision
 
 The owner's first review correctly classified the initial result as good glass but not yet liquid glass: it lacked material personality, physical response, and beauty. The permitted M1 revision therefore kept the architecture and material vocabulary fixed while changing the optical behavior:
 
@@ -52,7 +56,7 @@ The owner's first review correctly classified the initial result as good glass b
 - Hover pulls the body toward the pointer, shifts the light field, increases refraction, and adds localized internal illumination.
 - Press compresses the rounded body, concentrates transmitted light, and increases the refraction response without turning the whole control into a magnifier.
 - Source luminance now modulates tint and edge lighting in the WebGL path.
-- The owned-DOM path uses the same displacement map and gains matching geometry-led flex and surface illumination.
+- Semantic controls remain independent DOM overlays while the WebGL body supplies geometry-led flex and surface illumination.
 - Reduced-motion removes the geometry deformation.
 - Interaction redraws only changed uniforms and reuses the most recently presented video texture; it does not create an unscheduled media-upload loop.
 - Visual transforms no longer change WebGL backing resolution or cause one-pixel GPU allocation jitter.
@@ -79,49 +83,43 @@ The semantic play/pause button remains normal DOM above decorative, pointer-tran
 At 240×56 CSS pixels and DPR 2:
 
 - Physical map: 480×112.
-- Raw pixel SHA-256: `bc73270d23f1bb58505084aa055488648a3e4c6a8b45feb9445ba658ce59e884`.
-- PNG SHA-256: `ade9a27676c8a2dfe3578021c24d72a7680e72569656b9a7079faa0b1ef63dac`.
-- Center probe: `[128, 128, 255, 255]`; neutral RG with maximum settled-body thickness in B.
-- Left/right X probes: `-1` / `+1` normalized vectors.
-- Top/bottom Y probes: `-1` / `+1` normalized vectors.
-- Fixed SVG and WebGL probe equations agree within the required one CSS pixel; for the current map they are mathematically identical.
+- Raw pixel SHA-256: `c25ed78d12145887f8595f21be4059417a92d95a9636e0c9b81062b3001ccddb`.
+- PNG SHA-256: `7115eea3edeba0bb3183e41dbc22c349e8d0879922a24aa8aaf37444ab6a5f82`.
+- Center probe: `[128, 132, 255, 255]`; nearly neutral RG with maximum settled-body thickness in B.
+- Left/right X probes: `-0.8346` / `+0.8031` normalized vectors.
+- Top/bottom Y probes: `-0.8346` / `+0.8031` normalized vectors.
+- WebGL continuity probes exercise the actual encoded map at rest and maximum interaction energy and report zero local foldovers.
 
-Artifacts:
-
-- `.gstack/evidence/gate-1/result/determinism/displacement-map.png`
-- `.gstack/evidence/gate-1/result/determinism/displacement-map.sha256`
-- `.gstack/evidence/gate-1/result/determinism/pixel-probes.json`
-- `.gstack/evidence/gate-1/result/determinism/manifest.json`
+Artifacts: `.gstack/evidence/gate-1/m1.1-stage-a-revision-1/determinism/`.
 
 ## Browser, lifecycle, and performance evidence
 
-The complete suite passed against both a fresh development server and the built production application:
+The accepted Stage A suite passed again after SVG cleanup against both a fresh development server and the built production application:
 
-- 15/15 development tests and 15/15 production tests passed: Chromium, Firefox, and Playwright WebKit.
+- 27/27 development tests and 27/27 production tests passed: Chromium, Firefox, and Playwright WebKit.
 - SSR response contains the semantic control and honest CSS fallback.
 - Hydration produced no captured console or page errors.
 - Keyboard focus and Space activation work.
 - All explicit renderer modes report their actual renderer/fallback state.
 - DPR regeneration, zero-size recovery, renderer cleanup, and forced WebGL context loss pass.
 - Rest, hover, and press preserve the normal semantic control and are exercised with real pointer input.
-- All 18 fixed-scene visual regressions pass, including separate energized and pressed captures for each engine.
+- All 40 Stage A fixed crops remain directly reviewable across rest, hover, press, and representative cross-engine states. The 27 tracked baseline snapshots remain unchanged.
 
 Reference production-run metrics at DPR 2:
 
 | Engine | Static canvas frames | Paused canvas delta | Canvas max render | Long tasks | Paused video delta | Video callbacks / uploads |
 |---|---:|---:|---:|---:|---:|---:|
-| Chromium | 3 | 0 | 6.9 ms | 0 | 0 | 24 / 25 |
-| Firefox | 3 | 0 | 1 ms | 0 | 0 | 19 / 19 |
-| WebKit | 3 | 0 | 4 ms | 0 | 0 | 20 / 21 |
+| Chromium | 3 | 0 | 6.4 ms | 0 | 0 | 25 / 26 |
+| Firefox | 3 | 0 | 1 ms | 0 | 0 | 20 / 20 |
+| WebKit | 3 | 0 | 3 ms | 0 | 0 | 20 / 21 |
 
 The one permitted extra video upload is the explicit playback transition. These are controlled headless results on the reference Mac, not universal performance claims.
 
 Artifacts:
 
-- `.gstack/evidence/gate-1/result/metrics/{chromium,firefox,webkit}.json`
-- `.gstack/evidence/gate-1/result/traces/*-performance-trace.zip`
-- `.gstack/evidence/gate-1/result/reports/playwright-report.json`
-- `.gstack/evidence/gate-1/result/reports/playwright-production-report.json`
+- `.gstack/evidence/gate-1/m1.1-stage-a-revision-1/metrics/{development,production}/{chromium,firefox,webkit}.json`
+- `.gstack/evidence/gate-1/m1.1-stage-a-revision-1/playwright-output/`
+- `.gstack/evidence/gate-1/m1.1-stage-a-revision-1/reports/`
 
 Playwright WebKit is automation evidence only. It is not evidence of compatibility with shipping Safari or iOS Safari.
 
@@ -130,7 +128,7 @@ Playwright WebKit is automation evidence only. It is not evidence of compatibili
 The bounded visual revision is materially stronger than the recorded baseline and the first M1 review state:
 
 - The glass surface is consistently visible on high-frequency DOM/canvas and natural video.
-- Refraction is localized to a controlled bevel rather than a full-surface magnifier.
+- Refraction is bounded across one continuous capsule field rather than concentrated in a pinching internal bevel.
 - The surface has distinct resting, energized, and pressed behavior; deformation, refraction, and light move together.
 - The same pressed behavior is materially consistent in Chromium, Firefox, and Playwright WebKit.
 - No black renderer output, clipped corner, harsh chromatic ring, or hidden control text appears in the fixed scenes.
@@ -141,13 +139,13 @@ This remains an engineering fixture, not final product polish. The owner remains
 
 ### Extended owner-review gallery
 
-After the bounded optical revision, the owner requested broader examples before making the gate decision. The private `/m1` fixture now includes three canvas stress studies—Prism, Contours, and Nocturne—alongside owned DOM, natural video, and forced fallback. These are evaluation scenes, not new product capabilities or material presets.
+After the bounded optical revision, the owner requested broader examples before making the gate decision. The private `/m1` fixture now includes three canvas stress studies—Prism, Contours, and Nocturne—alongside natural video and forced fallback. These are evaluation scenes, not new product capabilities or material presets.
 
 - Prism exposes high-frequency refraction and chromatic restraint.
 - Contours exposes continuity and depth across the lens profile.
 - Nocturne exposes low-light transmission, highlights, and press response.
 - Every canvas study retains the same material, map hash, displacement value, geometry, and WebGL path.
-- Development and built-production suites now pass 18/18 checks across Chromium, Firefox, and Playwright WebKit.
+- Development and built-production Stage A suites pass 27/27 checks across Chromium, Firefox, and Playwright WebKit.
 - The reviewed visual set now contains 27 goldens, including the resting and pressed Nocturne states.
 
 This extension gathers evidence for the existing human decision; it does not reopen unlimited M1 tuning or authorize Milestone 2.
@@ -156,9 +154,9 @@ This extension gathers evidence for the existing human decision; it does not reo
 
 Owner review correctly identified that the surface still read as an outlined capsule rather than material shaped by light. A follow-up experiment replaced the hard perimeter with a masked CSS conic gradient and softened the nested play-control outline. The result erased the silhouette, muddied the control, and read as a blurred glow pasted over the component rather than renderer-native illumination. It was rejected immediately and removed.
 
-The last coherent visual state has been restored. The border concern remains unresolved. Any further attempt must derive edge illumination from the same displacement/thickness geometry inside the SVG/WebGL rendering paths; CSS gradients, masks, borders, and shadow approximations are explicitly disallowed as a solution.
+Focused WebGL revision 1 resolved the border concern with renderer-native directional light, opposing occlusion, tint, and transmission derived from the accepted continuous field. The same-material SVG attempt subsequently failed because its legal `SourceGraphic` input cannot transmit the already-composited backdrop. CSS gradients, masks, borders, shadow approximations, duplicated substrates, and DOM capture remain disallowed as substitutes.
 
-Reviewed screenshots are stored under `.gstack/evidence/gate-1/result/screenshots/` with a hash manifest. The tracked visual-regression goldens are under `tests/m1.spec.ts-snapshots/`.
+Reviewed screenshots are stored under `.gstack/evidence/gate-1/m1.1-stage-a-revision-1/fixed-crops/` with a hash manifest. The tracked visual-regression goldens are under `tests/m1.spec.ts-snapshots/`.
 
 ## Verification commands
 
@@ -183,17 +181,17 @@ corepack pnpm size
 - The legacy public core still contains Mode C, `html2canvas`, silent no-ops, duplicate renderers/types, placeholder linting, and bundle-analysis warnings. M1 intentionally does not remove them.
 - The playground production build still depends on Google Fonts network access.
 - The package schema, API exports, React wrapper, workbench, Vite fixture, and production package boundaries are not frozen or implemented.
-- No public package, deployment, commit, push, or pull request was created.
+- No public package, deployment, push, or pull request was created. Closure is limited to a recoverable local research branch and commit.
 
 ## Current gate decision
 
-M1 is **not accepted**. Its mechanical evidence is retained, but the material-lighting proof remains incomplete and Milestone 2 is blocked.
+M1.1 and M1 are **NO-GO for renderer parity**. WebGL Stage A is accepted and locked; owned-DOM SVG Stage B is rejected and absent from executable source. Milestone 2 is blocked pending explicit acceptance of `docs/architecture/RENDERING-REFRAME.md` and its capability-scoped entry contract.
 
-The next and only permitted implementation step is **M1.1 — renderer-native material lighting**:
+M1.1 is closed:
 
-1. Prove the lighting model in WebGL without a CSS finish perimeter, scene-specific optical values, or snapshot replacement.
-2. Pause for explicit owner visual acceptance.
-3. Only after WebGL acceptance, prove an owned-DOM SVG path driven by the same material and surface field.
-4. Stop or reframe Glaze if either renderer requires CSS lighting tricks, renderer-specific materials, or repeated subjective tuning.
+1. ~~Prove the lighting model in WebGL without a CSS finish perimeter, scene-specific optical values, or snapshot replacement.~~ Accepted in focused revision 1.
+2. ~~Pause for explicit owner visual acceptance.~~ Resolved: **ACCEPT WEBGL LIGHTING FOR STAGE A**.
+3. ~~Prove or disprove an owned-DOM SVG path driven by the same locked material and surface field.~~ Resolved: **NO-GO / REFRAME**.
+4. ~~Stop or reframe Glaze if either renderer requires CSS lighting tricks, renderer-specific materials, or repeated subjective tuning.~~ Resolved by the explicit capability-tier reframe.
 
-Workbench development, public API/schema freeze, multi-framework support, publishing, deployment, and Milestone 2 remain prohibited until M1.1 passes and the owner explicitly accepts the result.
+The next authorized gate is owner/orchestrator review of the rendering reframe and exact M2 entry criteria. Workbench development, public API/schema freeze, multi-framework support, publishing, deployment, and Milestone 2 implementation remain prohibited until that gate is explicitly accepted.

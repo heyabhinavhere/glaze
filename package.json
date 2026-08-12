@@ -19,6 +19,8 @@
     "test:m1": "playwright test tests/m1.spec.ts",
     "test:m1:visual": "playwright test tests/m1.spec.ts --grep @visual",
     "test:m1:performance": "playwright test tests/m1.spec.ts --grep @performance",
+    "test:m1.1:stage-a": "playwright test -c playwright.m1-1.config.ts tests/m1.spec.ts --grep-invert @visual",
+    "evidence:m1.1:stage-a": "vitest run tests/m1-1-artifacts.test.ts",
     "evidence:m1": "vitest run tests/m1-artifacts.test.ts"
   },
   "devDependencies": {
