@@ -14,9 +14,18 @@
     "build:playground": "corepack pnpm --filter playground build",
     "lint": "corepack pnpm -r lint",
     "size": "corepack pnpm --filter @glazelab/core size",
-    "typecheck": "corepack pnpm -r typecheck"
+    "typecheck": "corepack pnpm -r typecheck",
+    "test:unit": "vitest run tests/displacement.test.ts",
+    "test:m1": "playwright test tests/m1.spec.ts",
+    "test:m1:visual": "playwright test tests/m1.spec.ts --grep @visual",
+    "test:m1:performance": "playwright test tests/m1.spec.ts --grep @performance",
+    "evidence:m1": "vitest run tests/m1-artifacts.test.ts"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "@playwright/test": "^1.62.1",
+    "@types/pngjs": "^6.0.5",
+    "pngjs": "^7.0.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
   }
 }
