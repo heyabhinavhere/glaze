@@ -6,7 +6,9 @@ Checkpoint branch: `aj/glaze-m1-research-spike`
 
 ## Verdict
 
-**WEBGL STAGE A ACCEPTED / SAME-MATERIAL SVG PARITY NO-GO / ARCHITECTURE REFRAME REQUIRED.** The private source-aware spike proves the explicit-source WebGL material, determinism, lifecycle, fallback, and browser-automation boundary. It disproves the proposed same-material owned-DOM SVG parity contract. M1.1 and M1 are closed as NO-GO for renderer parity, and Milestone 2 remains blocked pending explicit acceptance of `docs/architecture/RENDERING-REFRAME.md`.
+**WEBGL STAGE A ACCEPTED / SAME-MATERIAL SVG PARITY NO-GO / ARCHITECTURE REFRAME ACCEPTED.** The private source-aware spike proves the explicit-source WebGL material, determinism, lifecycle, fallback, and browser-automation boundary. It disproves the proposed same-material owned-DOM SVG parity contract. M1.1 and M1 are closed as NO-GO for renderer parity. The owner/orchestrator subsequently accepted `docs/architecture/RENDERING-REFRAME.md` and only the private explicit-video M2 slice recorded in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`.
+
+> **Historical M1 closure state — earlier on 2026-08-12:** M2 was blocked until the rendering reframe and one exact capability slice received explicit owner/orchestrator acceptance. That gate has since been satisfied for explicit video only.
 
 > **M1.1 Stage A decision — 2026-08-12:** The orchestrator explicitly accepted focused revision 1 as the locked WebGL material-lighting reference (`m1.1-continuous-capsule-lighting-r1`, material `m1-transport-controls`).
 >
@@ -185,7 +187,7 @@ corepack pnpm size
 
 ## Current gate decision
 
-M1.1 and M1 are **NO-GO for renderer parity**. WebGL Stage A is accepted and locked; owned-DOM SVG Stage B is rejected and absent from executable source. Milestone 2 is blocked pending explicit acceptance of `docs/architecture/RENDERING-REFRAME.md` and its capability-scoped entry contract.
+M1.1 and M1 remain **NO-GO for renderer parity**. WebGL Stage A is accepted and locked; owned-DOM SVG Stage B is rejected and absent from executable source. The owner/orchestrator subsequently accepted `docs/architecture/RENDERING-REFRAME.md` and accepted only the capability-scoped M2 explicit-video Next.js slice recorded in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`. That later acceptance does not reopen renderer parity or broaden M1.
 
 M1.1 is closed:
 
@@ -194,4 +196,4 @@ M1.1 is closed:
 3. ~~Prove or disprove an owned-DOM SVG path driven by the same locked material and surface field.~~ Resolved: **NO-GO / REFRAME**.
 4. ~~Stop or reframe Glaze if either renderer requires CSS lighting tricks, renderer-specific materials, or repeated subjective tuning.~~ Resolved by the explicit capability-tier reframe.
 
-The next authorized gate is owner/orchestrator review of the rendering reframe and exact M2 entry criteria. Workbench development, public API/schema freeze, multi-framework support, publishing, deployment, and Milestone 2 implementation remain prohibited until that gate is explicitly accepted.
+The rendering reframe gate and explicit-video M2 slice are now resolved. Any further slice requires a new owner/orchestrator architecture decision naming one capability. Workbench development, public API/schema freeze, multi-framework support, publishing, deployment, and unscoped renderer expansion remain unauthorized.

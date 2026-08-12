@@ -1,6 +1,8 @@
 # `@glazelab/core` — Design
 
-**Status:** draft, awaiting user review.
+> **Superseded roadmap document.** The former "M2 Scroll without staleness (Mode C)" plan and its arbitrary-DOM capture assumptions are rejected for the current Glaze roadmap. Mode C, `html2canvas`, screenshot textures, and hidden duplicate substrates must not be implemented or treated as an accepted capability. The authoritative architecture is `docs/architecture/RENDERING-REFRAME.md`; the accepted private M2 slice is recorded in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`. The remainder of this file is retained only as legacy design history.
+
+**Status:** superseded legacy draft; not an implementation contract.
 **Branch:** `feat/glazelab-core`.
 **Predecessor:** `docs/SPIKE-RIM-ENGINE.md` (Week 1 — decided full-WebGL
 primary + CSS fallback).

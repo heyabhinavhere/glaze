@@ -15,12 +15,14 @@
     "lint": "corepack pnpm -r lint",
     "size": "corepack pnpm --filter @glazelab/core size",
     "typecheck": "corepack pnpm -r typecheck",
-    "test:unit": "vitest run tests/displacement.test.ts",
+    "test:unit": "vitest run tests/displacement.test.ts tests/m2-explicit-video.test.ts",
     "test:m1": "playwright test tests/m1.spec.ts",
     "test:m1:visual": "playwright test tests/m1.spec.ts --grep @visual",
     "test:m1:performance": "playwright test tests/m1.spec.ts --grep @performance",
     "test:m1.1:stage-a": "playwright test -c playwright.m1-1.config.ts tests/m1.spec.ts --grep-invert @visual",
     "evidence:m1.1:stage-a": "vitest run tests/m1-1-artifacts.test.ts",
+    "test:m2:video": "playwright test -c playwright.m2-video.config.ts tests/m2-explicit-video.spec.ts",
+    "evidence:m2:video": "vitest run tests/m2-explicit-video-artifacts.test.ts",
     "evidence:m1": "vitest run tests/m1-artifacts.test.ts"
   },
   "devDependencies": {

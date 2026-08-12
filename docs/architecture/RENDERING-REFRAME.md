@@ -2,13 +2,19 @@
 
 Date: 2026-08-12
 Decision source: M1.1 Stage B NO-GO
-Status: architecture gate; Milestone 2 is not started or authorized
+Status: architecture accepted; M2 explicit-video Next.js slice accepted
 
 ## Decision
 
 Glaze has explicit capability tiers. It does not promise one renderer, one pixel result, or one physical material across WebGL and browser backdrop composition.
 
 The accepted high-fidelity path is the M1.1 Stage A WebGL material for explicit image, video, and canvas sources that Glaze owns. Semantic DOM remains real DOM above or beside that visual layer. A future browser-native backdrop path may be researched under a separate contract and visibly different fidelity claim. It must never be called the same renderer or a parity implementation.
+
+## Accepted implementation status
+
+The owner/orchestrator accepted this reframe and authorized one M2 source class: explicit same-origin `HTMLVideoElement` rendered by the locked WebGL material, with ordinary semantic DOM controls layered separately. The private `/m2/video` Next.js App Router fixture now proves that slice and is accepted in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`.
+
+This does not accept an image or canvas Next.js integration slice, a public API, a cross-renderer schema, a CSS/backdrop renderer, Mode C, or the workbench. Those remain separate capability decisions requiring explicit authorization and evidence.
 
 ## Capability matrix
 
@@ -78,9 +84,9 @@ The workbench cannot imply that a CSS/backdrop preview proves WebGL output, or t
 - Arbitrary DOM capture, `html2canvas`, screenshot textures, hidden duplicated substrates, and non-portable SVG background inputs: rejected for ownership, privacy, performance, lifecycle, and honesty reasons.
 - Silent renderer substitution: rejected because it conceals capability and fidelity differences from developers and users.
 
-## Exact Milestone 2 entry contract
+## Milestone 2 authorization and accepted slice
 
-Milestone 2 may begin only after the owner explicitly accepts this reframe and authorizes one capability-scoped implementation slice. Entry requires all of the following:
+The owner explicitly accepted this reframe and authorized one capability-scoped implementation slice: explicit video. That slice satisfied the following entry contract; every future capability slice must satisfy it independently:
 
 1. The requested slice names exactly one source class and capability: explicit-source WebGL, semantic overlay, future browser-native backdrop research, or fallback.
 2. Its public promise does not claim WebGL/DOM/backdrop parity, automatic DOM capture, or a frozen cross-renderer material schema.
@@ -90,4 +96,6 @@ Milestone 2 may begin only after the owner explicitly accepts this reframe and a
 6. Evidence gates include development and built-production runs in Chromium, Firefox, and Playwright WebKit; original-resolution visual review; hashes for immutable baselines and candidate artifacts; and qualified statements for real Safari/iOS coverage.
 7. Any future backdrop research starts with a browser capability/support proof and a separately named visual contract. It cannot inherit WebGL acceptance.
 
-The next authorized gate is owner/orchestrator review of this architecture and M2 entry contract. M2 implementation, the workbench, public schema freeze, framework wrappers, legacy Mode C changes, dependency installation, publication, deployment, push, and pull request creation remain non-goals until that gate is explicitly passed.
+The owner/orchestrator accepted this contract for explicit video only. `/m2/video` passed its development and built-production matrices across Chromium, Firefox, and Playwright WebKit, preserved the locked M1 material and baselines, and passed direct original-resolution visual review. Evidence and qualifications are recorded in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`.
+
+The next authorized gate is an explicit architecture decision naming any additional capability-scoped slice. The workbench, public schema freeze, framework wrappers, image/canvas expansion, CSS/backdrop research, legacy Mode C changes, publication, deployment, push, and pull request creation are not implied by M2 acceptance.

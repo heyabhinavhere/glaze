@@ -375,7 +375,12 @@ export class M1WebGLRenderer {
     this.resizeObserver.observe(this.source);
     this.intersectionObserver = new IntersectionObserver((entries) => {
       this.visible = entries[0]?.isIntersecting ?? true;
-      if (this.visible) this.draw();
+      if (this.visible) {
+        this.draw();
+        this.scheduleVideoFrame();
+      } else {
+        this.cancelVideoFrame();
+      }
     });
     this.intersectionObserver.observe(this.canvas);
 
@@ -420,6 +425,7 @@ export class M1WebGLRenderer {
       this.sourceKind !== "video" ||
       !(this.source instanceof HTMLVideoElement) ||
       this.source.paused ||
+      !this.visible ||
       this.videoFrameId !== null ||
       document.visibilityState !== "visible"
     ) {
@@ -602,13 +608,10 @@ export class M1WebGLRenderer {
 
   forceContextLoss(): void {
     const extension = this.gl.getExtension("WEBGL_lose_context");
-    if (extension) {
-      extension.loseContext();
-    } else {
-      this.canvas.dispatchEvent(
-        new Event("webglcontextlost", { cancelable: true }),
-      );
-    }
+    this.canvas.dispatchEvent(
+      new Event("webglcontextlost", { cancelable: true }),
+    );
+    extension?.loseContext();
   }
 
   getDiagnostics(): M1RendererDiagnostics {
