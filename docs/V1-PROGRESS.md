@@ -36,7 +36,7 @@ Validation:
 
 ## 2026-08-13 — Checkpoint 2: React package foundation
 
-Status: in progress
+Status: complete
 
 Implemented:
 
@@ -50,11 +50,45 @@ Implemented:
 Validation:
 
 - Package lint and TypeScript checks pass with no warnings.
-- Eight focused material/SSR tests pass.
-- The built root entry is 1.90 KB brotli against an 8 KB budget; the pure material entry is 785 B against 2 KB.
-- Package CSS is 1,630 B gzip against a 6 KB budget.
+- Nine focused material/SSR tests pass.
+- The built root entry is 1.97 KB brotli against an 8 KB budget; the pure material entry is 785 B against 2 KB.
+- Package CSS is 1,726 B gzip against a 6 KB budget.
 - Packed tarball contains only README, package manifest, compiled JS/types/maps, and the explicit stylesheet.
+- Development and production matrices each pass 12 tests across Chromium, Firefox, and Playwright WebKit.
+- Browser coverage includes SSR/hydration, semantic counts, arrow/Home/End navigation, every preset/range/select/tint control, honest capability fallback, reduced-motion and forced-colors simulations, export/reset, Strict Mode listener cleanup, and mobile viewport fit.
+- A packed React 18.3.1 consumer builds and runs without browser errors, closing the `react >=18` peer claim.
 
-Remaining before checkpoint completion:
+## 2026-08-13 — Checkpoint 3: workbench and fresh consumers
 
-- Strict Mode cleanup, hydration, keyboard behavior, accessibility, static-idle, and multi-instance behavior require browser coverage in real consumers.
+Status: complete
+
+Implemented:
+
+- Replaced the ambiguous legacy root configurator with a DialKit-like material workbench for the complete segmented-control slice.
+- Added five real-scale acceptance scenes: image detail, light, dark, text crossing, and interaction.
+- Added compact material controls, named presets, reset, requested/effective capability diagnostics, environment simulations, and copyable React/JSON output.
+- Removed runtime font fetching from the V1 workbench's critical path and preloaded its primary acceptance image.
+- Added self-contained React/Vite and Next.js App Router consumer applications that import only public package entrypoints.
+- Changed the legacy playground's default production build to webpack after repeated default Turbopack stalls; retained `build:turbopack` as an explicit unresolved diagnostic command. The fresh Next consumer passes the same Next `16.2.3` Turbopack build, isolating the stall to legacy playground scope rather than the Glaze package.
+
+Validation:
+
+- Human-scale desktop and 390 px mobile inspection found no horizontal overflow, clipped controls, magnifier/ring artifact, or unreadable selected state in the five acceptance scenes.
+- Interactive inspection caught and fixed a deferred React event-target bug in the tint/motion controls that lint, types, and builds did not catch.
+- Forced-colors inspection caught and fixed inherited dark-scene text that defeated system colors.
+- Both tracked consumers pass production builds and browser checks; the React consumer proves twenty static surfaces stay idle after settlement, and the Next consumer proves Server Component composition plus SSR/hydration.
+- Both consumers also install and build outside the monorepo from the packed `.tgz`; resolved package paths point into pnpm's tarball store rather than a workspace link.
+- The clean packed Next fixture passes its default Turbopack build and the pure `@glazelab/react/material` subpath imports in Node.
+- Full workspace build, TypeScript, package-size, and 21-test unit suite pass. Repository lint has zero errors and retains two pre-existing legacy `<img>` warnings; legacy `@glazelab/core` still has its pre-existing placeholder lint command.
+
+## 2026-08-13 — Checkpoint 4: native browser evidence and release handoff
+
+Status: in progress
+
+Remaining proof:
+
+- inspect the production workbench in shipping macOS Safari and iOS Simulator Safari;
+- capture final real-scale visual evidence after those inspections;
+- replace stale repository onboarding and project-state documentation;
+- run the complete final gate from a clean checkpoint and review the final diff; and
+- leave physical iPhone/iPad acceptance, publication, deployment, push, and merge as explicit owner-controlled actions.

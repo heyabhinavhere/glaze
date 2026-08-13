@@ -5,13 +5,15 @@
   "description": "Glaze playground — dogfoods @glazelab/core (and @glazelab/react once it ships).",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
+    "build:turbopack": "next build --turbopack",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@glazelab/core": "workspace:*",
+    "@glazelab/react": "workspace:*",
     "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",
     "lucide-react": "^1.8.0",

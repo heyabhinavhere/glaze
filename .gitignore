@@ -20,6 +20,7 @@ node_modules/
 
 # package builds
 packages/*/dist/
+examples/*/dist/
 
 # production
 /build
@@ -43,6 +44,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!examples/next-app/next-env.d.ts
 .gstack/
 
 # raw source images — not used by the app, kept locally for reference only

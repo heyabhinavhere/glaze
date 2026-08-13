@@ -1,0 +1,36 @@
+:root {
+  color: #edf2f4;
+  background: #0c1014;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; }
+
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(rgb(255 255 255 / .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / .035) 1px, transparent 1px),
+    radial-gradient(circle at 70% 20%, #513c67, transparent 32rem),
+    radial-gradient(circle at 20% 80%, #285e62, transparent 30rem),
+    #0c1014;
+  background-size: 32px 32px, 32px 32px, auto, auto, auto;
+}
+
+main { width: min(840px, calc(100% - 32px)); margin: 0 auto; padding: 88px 0; }
+.eyebrow { color: #8fa4ab; font: 11px/1.2 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .12em; }
+h1 { max-width: 760px; margin: 10px 0 0; font-size: clamp(42px, 8vw, 76px); line-height: .98; letter-spacing: -.065em; }
+.lede { max-width: 590px; margin: 18px 0 30px; color: #9eacb1; line-height: 1.65; }
+.demo { display: grid; gap: 24px; padding: 32px; color: #f4f8fa; }
+.demo > span { color: #a8b8be; font: 11px/1.2 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+.glaze-diagnostics { margin-top: 14px; }
+
+@media (max-width: 560px) {
+  main { padding: 48px 0; }
+  .demo { padding: 20px; }
+  .glaze-segmented { min-width: 0; width: 100%; }
+}

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { glazeMaterials, resolveGlazeMaterial } from "./material";
 import type {
+  GlazeDiagnosticsProps,
   GlazeSegmentedControlProps,
   GlazeSurfaceProps,
 } from "./types";
@@ -70,12 +71,22 @@ function resolveSelectedValue(
   return requested?.id ?? segments.find((segment) => !segment.disabled)?.id ?? "";
 }
 
+function lastEnabledIndex(
+  segments: GlazeSegmentedControlProps["segments"],
+) {
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    if (!segments[index]?.disabled) return index;
+  }
+  return -1;
+}
+
 export const GlazeSegmentedControl = forwardRef<
   HTMLDivElement,
   GlazeSegmentedControlProps
 >(function GlazeSegmentedControl(
   {
     "aria-label": ariaLabel,
+    capability = "css",
     className,
     defaultValue,
     disabled = false,
@@ -117,7 +128,7 @@ export const GlazeSegmentedControl = forwardRef<
     else if (event.key === "Home") {
       target = segments.findIndex((segment) => !segment.disabled);
     } else if (event.key === "End") {
-      target = segments.findLastIndex((segment) => !segment.disabled);
+      target = lastEnabledIndex(segments);
     } else return;
 
     event.preventDefault();
@@ -136,6 +147,7 @@ export const GlazeSegmentedControl = forwardRef<
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       className={cx("glaze-segmented", className)}
+      capability={capability}
       data-glaze-has-selection={selectedIndex >= 0}
       material={resolved}
       role="radiogroup"
@@ -173,11 +185,19 @@ export const GlazeSegmentedControl = forwardRef<
   );
 });
 
-export function GlazeDiagnostics({ className }: { className?: string }) {
+export function GlazeDiagnostics({
+  capability = "css",
+  className,
+  material = "regular",
+  ...props
+}: GlazeDiagnosticsProps) {
   const [preferences, setPreferences] = useState({
     forcedColors: false,
     reducedMotion: false,
   });
+  const materialLabel = typeof material === "string" ? material : "custom";
+  const fallbackReason =
+    capability === "css" ? "None" : `${capability} not enabled`;
 
   useEffect(() => {
     const forcedColors = window.matchMedia("(forced-colors: active)");
@@ -197,8 +217,11 @@ export function GlazeDiagnostics({ className }: { className?: string }) {
   }, []);
 
   return (
-    <dl className={cx("glaze-diagnostics", className)}>
-      <div><dt>Capability</dt><dd>CSS</dd></div>
+    <dl {...props} className={cx("glaze-diagnostics", className)}>
+      <div><dt>Material</dt><dd>{materialLabel}</dd></div>
+      <div><dt>Requested</dt><dd>{capability}</dd></div>
+      <div><dt>Effective</dt><dd>CSS</dd></div>
+      <div><dt>Fallback</dt><dd>{fallbackReason}</dd></div>
       <div><dt>Reduced motion</dt><dd>{preferences.reducedMotion ? "On" : "Off"}</dd></div>
       <div><dt>Forced colors</dt><dd>{preferences.forcedColors ? "On" : "Off"}</dd></div>
     </dl>
@@ -208,6 +231,7 @@ export function GlazeDiagnostics({ className }: { className?: string }) {
 export { glazeMaterials, resolveGlazeMaterial };
 export type {
   GlazeCapability,
+  GlazeDiagnosticsProps,
   GlazeMaterial,
   GlazeMaterialInput,
   GlazeMaterialName,

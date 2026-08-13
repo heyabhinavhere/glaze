@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { GlazeSegmentedControl, GlazeSurface } from "../src";
+import {
+  GlazeDiagnostics,
+  GlazeSegmentedControl,
+  GlazeSurface,
+} from "../src";
 
 describe("GlazeSurface", () => {
   it("renders deterministic CSS output during SSR", () => {
@@ -62,5 +66,18 @@ describe("GlazeSegmentedControl", () => {
 
     expect(output).toContain('data-glaze-has-selection="false"');
     expect(output).not.toContain('aria-checked="true"');
+  });
+});
+
+describe("GlazeDiagnostics", () => {
+  it("renders requested, effective, and fallback capability truth during SSR", () => {
+    const output = renderToStaticMarkup(
+      <GlazeDiagnostics capability="page-backdrop" material={{ frost: 50 }} />,
+    );
+
+    expect(output).toContain("custom");
+    expect(output).toContain("page-backdrop");
+    expect(output).toContain("page-backdrop not enabled");
+    expect(output).toContain(">CSS<");
   });
 });

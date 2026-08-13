@@ -45,10 +45,16 @@ export interface GlazeSurfaceProps extends HTMLAttributes<HTMLElement> {
 export interface GlazeSegmentedControlProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
   "aria-label": string;
+  capability?: GlazeCapability;
   defaultValue?: string;
   disabled?: boolean;
   material?: GlazeMaterialInput;
   onValueChange?: (value: string) => void;
   segments: readonly GlazeSegment[];
   value?: string;
+}
+
+export interface GlazeDiagnosticsProps extends HTMLAttributes<HTMLDListElement> {
+  capability?: GlazeCapability;
+  material?: GlazeMaterialInput;
 }
