@@ -38,10 +38,23 @@ Validation:
 
 Status: in progress
 
-Planned proof:
+Implemented:
 
-- `@glazelab/react` has an SSR-safe export map and explicit CSS export;
-- material resolution is deterministic and unit tested;
-- the segmented control renders real semantic buttons with keyboard behavior;
-- Strict Mode cleanup and static-idle behavior have browser coverage; and
-- package JavaScript and CSS remain inside the V1 budgets.
+- Added the small public `@glazelab/react` package with explicit root, pure `./material`, and `./styles.css` exports.
+- Added semantic `GlazeSurface` and `GlazeSegmentedControl` components plus a narrowly scoped preference diagnostic.
+- Added deterministic named/custom material resolution, input normalization, honest capability fallback attributes, and unit coverage.
+- Preserved `"use client"` in emitted ESM and CJS component entrypoints while keeping the pure material subpath server-safe. This is asserted by the package build.
+- Replaced fragile runtime CSS alpha arithmetic and comma-separated color channels with precomputed standards-compatible variables.
+- Added SSR markup tests for deterministic output, invalid/disabled selection recovery, and unsupported-capability reporting.
+
+Validation:
+
+- Package lint and TypeScript checks pass with no warnings.
+- Eight focused material/SSR tests pass.
+- The built root entry is 1.90 KB brotli against an 8 KB budget; the pure material entry is 785 B against 2 KB.
+- Package CSS is 1,630 B gzip against a 6 KB budget.
+- Packed tarball contains only README, package manifest, compiled JS/types/maps, and the explicit stylesheet.
+
+Remaining before checkpoint completion:
+
+- Strict Mode cleanup, hydration, keyboard behavior, accessibility, static-idle, and multi-instance behavior require browser coverage in real consumers.

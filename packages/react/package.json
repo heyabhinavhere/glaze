@@ -1,0 +1,68 @@
+{
+  "name": "@glazelab/react",
+  "version": "0.1.0-alpha.0",
+  "description": "Semantic, CSS-first glass surfaces and controls for React and Next.js.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./material": {
+      "types": "./dist/material.d.ts",
+      "import": "./dist/material.js",
+      "require": "./dist/material.cjs"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup && cp src/styles.css dist/styles.css && node scripts/check-client-boundary.mjs",
+    "dev": "tsup --watch",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "size": "size-limit && node scripts/check-css-size.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^11.1.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "size-limit": "^11.1.6",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "size-limit": [
+    {
+      "name": "@glazelab/react",
+      "path": "dist/index.js",
+      "limit": "8 KB"
+    },
+    {
+      "name": "@glazelab/react/material",
+      "path": "dist/material.js",
+      "limit": "2 KB"
+    }
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
