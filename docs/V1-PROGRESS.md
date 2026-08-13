@@ -51,9 +51,9 @@ Validation:
 
 - Package lint and TypeScript checks pass with no warnings.
 - Nine focused material/SSR tests pass.
-- The built root entry is 1.97 KB brotli against an 8 KB budget; the pure material entry is 785 B against 2 KB.
+- The built root entry is 2.01 KB brotli against an 8 KB budget; the pure material entry is 785 B against 2 KB.
 - Package CSS is 1,726 B gzip against a 6 KB budget.
-- Packed tarball contains only README, package manifest, compiled JS/types/maps, and the explicit stylesheet.
+- Packed tarball contains only the MIT license, README, package manifest, compiled JS/types/maps, and the explicit stylesheet.
 - Development and production matrices each pass 12 tests across Chromium, Firefox, and Playwright WebKit.
 - Browser coverage includes SSR/hydration, semantic counts, arrow/Home/End navigation, every preset/range/select/tint control, honest capability fallback, reduced-motion and forced-colors simulations, export/reset, Strict Mode listener cleanup, and mobile viewport fit.
 - A packed React 18.3.1 consumer builds and runs without browser errors, closing the `react >=18` peer claim.
@@ -83,12 +83,24 @@ Validation:
 
 ## 2026-08-13 — Checkpoint 4: native browser evidence and release handoff
 
-Status: in progress
+Status: complete
 
-Remaining proof:
+Native and visual proof:
 
-- inspect the production workbench in shipping macOS Safari and iOS Simulator Safari;
-- capture final real-scale visual evidence after those inspections;
-- replace stale repository onboarding and project-state documentation;
-- run the complete final gate from a clean checkpoint and review the final diff; and
-- leave physical iPhone/iPad acceptance, publication, deployment, push, and merge as explicit owner-controlled actions.
+- Inspected the built production workbench in shipping macOS Safari; all five segmented controls updated together through the Activity selection and the reduced-motion environment control remained operable.
+- Inspected the built production workbench in iOS 26.5 Simulator Safari on an iPhone 17 Pro; the mobile layout rendered cleanly and a touch selection updated the visible controls without clipping or horizontal overflow.
+- Captured viewport and full-page Chromium evidence for production desktop and 390 px mobile layouts, plus native macOS and iOS Safari screenshots under `.gstack/evidence/v1/visual/`.
+- Replaced stale repository, project-state, and package onboarding with the V1 contract, workflow, API, diagnostics, browser behavior, limitations, and owner-controlled release gates.
+
+Final gate:
+
+- `corepack pnpm quality:v1` passed as one uninterrupted release chain.
+- Workspace build, lint, TypeScript, package size, 21 unit tests, 12 development browser tests, 12 built-production browser tests, tracked React/Next consumer builds, and consumer browser checks all passed.
+- The gate created the publishable tarball, installed it into fresh React 19, React 18.3.1, and Next.js 16.2.3 projects outside the monorepo, built all three, verified the pure material subpath in Node, rejected workspace-link resolution, and passed the packed production browser checks.
+- Repository lint has zero errors and two explicitly retained legacy `<img>` warnings; the legacy `@glazelab/core` lint command remains a placeholder and is outside the new package acceptance claim.
+
+Owner-controlled gates intentionally not performed:
+
+- physical iPhone and iPad Safari acceptance;
+- npm publication or provenance signing;
+- deployment, push, pull request, or merge.

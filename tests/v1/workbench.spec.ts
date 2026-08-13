@@ -1,4 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+
+const visualEvidenceRoot = ".gstack/evidence/v1/visual";
+mkdirSync(visualEvidenceRoot, { recursive: true });
 
 declare global {
   interface Window {
@@ -50,6 +54,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("SSR and hydration preserve the semantic acceptance matrix", async ({
+  browserName,
   page,
   request,
 }) => {
@@ -69,6 +74,19 @@ test("SSR and hydration preserve the semantic acceptance matrix", async ({
   await expect(page.getByRole("radio")).toHaveCount(15);
   await expect(page.locator("[data-scene]")).toHaveCount(5);
   await expect(page.locator("[data-glaze-fallback]")).toHaveCount(0);
+  if (browserName === "chromium") {
+    await page.screenshot({
+      path: `${visualEvidenceRoot}/${
+        process.env.V1_PRODUCTION === "1" ? "production" : "development"
+      }-desktop-chromium.png`,
+    });
+    await page.screenshot({
+      fullPage: true,
+      path: `${visualEvidenceRoot}/${
+        process.env.V1_PRODUCTION === "1" ? "production" : "development"
+      }-desktop-full-chromium.png`,
+    });
+  }
   expect(errors).toEqual([]);
 });
 
@@ -201,7 +219,10 @@ test("simulations, export, reset, and Strict Mode cleanup are bounded", async ({
   expect(errors).toEqual([]);
 });
 
-test("mobile layout keeps the workbench inside the viewport", async ({ page }) => {
+test("mobile layout keeps the workbench inside the viewport", async ({
+  browserName,
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(
@@ -216,4 +237,17 @@ test("mobile layout keeps the workbench inside the viewport", async ({ page }) =
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(fit.scrollWidth).toBe(fit.clientWidth);
+  if (browserName === "chromium") {
+    await page.screenshot({
+      path: `${visualEvidenceRoot}/${
+        process.env.V1_PRODUCTION === "1" ? "production" : "development"
+      }-mobile-chromium.png`,
+    });
+    await page.screenshot({
+      fullPage: true,
+      path: `${visualEvidenceRoot}/${
+        process.env.V1_PRODUCTION === "1" ? "production" : "development"
+      }-mobile-full-chromium.png`,
+    });
+  }
 });

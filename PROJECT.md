@@ -1,133 +1,88 @@
-# Glaze — Project state
+# Glaze — current project state
 
-A visual configurator for **Apple Liquid Glass / Figma-quality** glass effects.
-You position a draggable, resizable glass panel over a chosen backdrop and tune
-parameters until it looks the way you want, then export the result.
+Date: 2026-08-13
 
-The bar for "good" is **Figma's glass material** and Apple's Liquid Glass — not
-generic CSS glassmorphism. Anything that reads as a magnifier, a coloured ring,
-a stroke, or a halo is wrong.
+Product line: `aj/glaze-v1`
 
----
+Status: V1 release candidate; not published or deployed
 
-## Current state (2026-04-16)
+## Product target
 
-### What works
-- Live WebGL preview with refraction, frosted body, lit rim, opposite-corner
-  back-glow, chromatic dispersion, drop + inner shadow.
-- Single hand-tuned default config in `lib/presets.ts` (no preset gallery).
-- Draggable + corner/edge-resizable glass panel.
-- 7 backgrounds with optional auto-tint suggestion.
-- Advanced overrides for every shader uniform (refraction, bevel depth, bevel
-  width, **bend zone**, chromatic, rim intensity, specular, frost, saturation,
-  brightness) plus advanced drop-shadow XYZ + spread + opacity.
-- Plain-CSS export (collapsed by default; click the bottom bar to expand).
+Glaze is a DialKit-like developer workflow for glass UI on the web: install a small React package, render real semantic controls, tune a compact material in a visual workbench, inspect renderer and fallback truth, and copy a stable configuration into an existing React or Next.js app.
 
-### What's pending
-- **#25 — React (WebGL) component export.** Currently the only export is plain
-  CSS, which loses everything WebGL does (refraction, chromatic, lit rim).
-  Stub button exists in the bottom bar.
-- **CSS export accuracy.** What we emit covers blur/tint/shadows but NOT
-  refraction or chromatic. Either label honestly as "approximate" or improve it.
-- **SwiftUI / AI Prompt / JSON export tabs** are stubbed buttons.
-- **Mobile layout.** Controls panel is fixed 380px; won't fit on phones.
-- **Auto-adapt to background** toggle is wired in UI; verify it actually moves
-  the tint when you swap backgrounds (haven't tested end-to-end recently).
+V1 optimizes an honest CSS material for clarity and reliability. It does not call CSS output refraction and does not capture arbitrary page DOM.
 
-### What's NOT planned
-- More backgrounds (7 is enough).
-- More effect parameters (the model is dialed in).
-- Preset gallery (deliberately removed).
-- A "simple/advanced" mode toggle (collapsed Advanced section is enough).
+## Completed vertical slice
 
----
+- `GlazeSurface`: semantic polymorphic material surface.
+- `GlazeSegmentedControl`: real buttons with radio-group semantics, roving focus, click, Arrow Left/Right, Home, End, disabled states, and visible selection.
+- `GlazeDiagnostics`: requested/effective capability, fallback, material, reduced-motion, and forced-colors truth.
+- Named and custom material resolution with stable public values.
+- Explicit ESM/CJS client entry plus a pure server-safe `./material` subpath.
+- Explicit package CSS; no runtime style injection.
+- Five-scene workbench with presets, all material controls, reset, simulations, and React/JSON export.
+- Self-contained React/Vite and Next App Router consumers.
 
-## Default config (current source of truth)
+## Evidence state
 
-Lives in `lib/presets.ts` as `defaultConfig`. Captures the user's hand-tuned
-target as of 2026-04-16:
+- Package lint and TypeScript pass with no warnings.
+- Root package: 2.01 KB brotli / 8 KB budget.
+- Pure material entry: 785 B brotli / 2 KB budget.
+- CSS: approximately 1.7 KB gzip / 6 KB budget.
+- Unit suite: 21 tests across four files.
+- Workbench: 12 development and 12 production checks across Chromium, Firefox, and Playwright WebKit.
+- Consumers: linked and packed-tarball production builds plus browser checks.
+- React compatibility: packed React 18.3.1 consumer build and runtime interaction pass.
+- Next compatibility: Next `16.2.3` App Router default Turbopack build, SSR, hydration, and keyboard pass.
+- Native inspection: shipping macOS Safari and iOS 26.5 Simulator Safari on iPhone 17 Pro.
 
-```
-light            angle 315°, intensity 100
-tint             #FFFFFF / 10%
-grain            off
-border radius    60px
+Generated evidence lives under `.gstack/evidence/v1/` and is intentionally ignored by Git. Durable results and caveats live in `docs/V1-PROGRESS.md`.
 
-inner shadow     #000 / 10%, X 0, Y 4, blur 24, spread −2
+## Architecture decisions that must not drift
 
-drop shadow      Y 16, blur 75, spread 4, opacity 24%
+1. Public materials express semantic intent, never raw shader uniforms.
+2. `css` is the default and only supported public V1 renderer.
+3. Unsupported capabilities fall back visibly and preserve semantic DOM.
+4. Arbitrary page capture, `html2canvas`, duplicated interactive subtrees, and automatic backdrop inference are outside V1.
+5. Optical experiments remain private and separately named until ownership, semantics, performance, bundle, and visual gates pass.
+6. A passing build is not visual acceptance. Real-scale human review remains a separate gate.
+7. No broad component catalogue until the segmented-control slice stays green.
 
-advanced
-  refraction         100
-  bevel depth        100
-  bevel width        2
-  bend zone          (auto = 0.07)
-  chromatic          100
-  rim intensity      44
-  specular size      0
-  specular opacity   0
-  frost              40
-  saturation         20%
-  brightness         80%
+## Legacy boundaries
+
+`packages/core`, `/m1`, `/m2/video`, and historical test routes preserve renderer research. They are not the ordinary React API and must not leak into public examples.
+
+The legacy playground currently builds with webpack by default because its Turbopack production compile repeatedly stalls. `pnpm --filter playground build:turbopack` preserves that diagnostic path. The fresh Next consumer passes the same Next version's Turbopack build, so the issue is scoped to legacy playground history rather than `@glazelab/react`.
+
+The rejected candidate probe remains recoverable from commit `7459691` and branch `aj/glaze-engine-bakeoff`; it is not executable on the V1 branch.
+
+## Release commands
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm quality:v1
 ```
 
-`light.intensity = 100` is fixed because there's no Simple slider for it.
+Focused commands:
 
----
-
-## File structure
-
-```
-app/
-  page.tsx              Main UI: backdrop picker, glass panel (drag/resize),
-                        Simple controls panel, collapsible export bar.
-  layout.tsx            Preloads the 7 background JPEGs with crossOrigin.
-  globals.css           Slider + scrollbar styling.
-
-components/
-  GlassCanvas.tsx       Bridges React → WebGL renderer. Captures the backdrop
-                        (fast path: decode the bg image directly; fallback:
-                        html2canvas of the DOM). useLayoutEffect for sync
-                        texture upload on background change.
-  AdvancedControls.tsx  The Advanced panel: collapsible sections + override
-                        sliders with reset-to-derived buttons.
-
-lib/
-  shader.ts             GLSL — main glass fragment, vertex, plus the 13-tap
-                        Gaussian blur shader used by the FBO pipeline.
-  webgl-renderer.ts     WebGLGlassRenderer class: two FBOs (heavy body blur
-                        + fixed light rim blur), multi-pass blur, per-lens
-                        viewport draw.
-  glass-engine.ts       Pure config → uniforms transform. ADVANCED_RANGES
-                        maps user 0–100 → uniform scale. CSS-export helpers
-                        (drop/inner shadow strings).
-  types.ts              GlassConfig, GlassAdvanced, GlassShaderUniforms.
-  presets.ts            Just defaultConfig now (presets removed).
-  export-css.ts         Plain-CSS export string builder.
-
-spec/                   Pre-WebGL planning docs. Mostly stale — keep for
-                        history but don't trust them as current architecture.
+```bash
+corepack pnpm build
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm size
+corepack pnpm test:unit
+corepack pnpm test:v1
+corepack pnpm test:v1:production
+corepack pnpm test:consumers
+corepack pnpm test:packed-consumers
 ```
 
----
+## Remaining owner-controlled gates
 
-## Where to look first
-- **`docs/RENDERING.md`** — the WebGL pipeline as it actually works today,
-  plus the failed approaches we deliberately reverted from. Read this before
-  touching shader.ts or webgl-renderer.ts.
-- `lib/shader.ts` — the rendering model lives in comments here too.
+- Inspect on at least one physical iPhone and one physical iPad.
+- Decide whether the visual material is accepted for alpha publication.
+- Choose npm ownership/name and publish.
+- Choose deployment destination and deploy the workbench.
+- Push, open/approve a pull request, and merge.
 
----
-
-## Working with the user
-The user is uncompromising about visual quality. They reference Apple's
-material brief and Figma's glass effect as the bar, and will show side-by-side
-comparisons when something doesn't match. They expect:
-- Diagnose before changing code. When asked to investigate, say what's wrong
-  and why before proposing a fix.
-- Test before claiming done. They've explicitly called out passing untested
-  changes as unacceptable. The browse skill has no WebGL — admit when you
-  can't visually verify and ask them to test.
-- No half-baked fixes. Don't bury problems behind workarounds; understand
-  the root cause.
-- They iterate fast and give precise visual feedback. Trust their eye.
+None of those actions may be inferred from local release-candidate completion.

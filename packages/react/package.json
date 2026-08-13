@@ -10,6 +10,7 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "style": "./dist/styles.css",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -31,12 +32,16 @@
     "build": "tsup && cp src/styles.css dist/styles.css && node scripts/check-client-boundary.mjs",
     "dev": "tsup --watch",
     "lint": "eslint src",
+    "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "size": "size-limit && node scripts/check-css-size.mjs"
   },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "devDependencies": {
     "@size-limit/preset-small-lib": "^11.1.6",
