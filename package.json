@@ -25,6 +25,8 @@
     "evidence:m2:video": "vitest run tests/m2-explicit-video-artifacts.test.ts",
     "test:bakeoff": "playwright test -c playwright.bakeoff.config.ts tests/bakeoff.spec.ts --grep-invert @visual",
     "test:bakeoff:visual": "playwright test -c playwright.bakeoff.config.ts tests/bakeoff.spec.ts --grep @visual",
+    "test:adoption": "playwright test -c playwright.adoption.config.ts tests/adoption.spec.ts --grep-invert @visual",
+    "test:adoption:visual": "playwright test -c playwright.adoption.config.ts tests/adoption.spec.ts --grep @visual",
     "evidence:m1": "vitest run tests/m1-artifacts.test.ts"
   },
   "devDependencies": {

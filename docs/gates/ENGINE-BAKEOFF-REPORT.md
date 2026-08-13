@@ -138,3 +138,7 @@ Gate 3 is a bounded dependency/adoption spike for Candidate A. It must answer, b
 6. Is vendoring, forking, or depending on `0.1.1` the safer ownership model, and what upgrade/attribution policy follows from that choice?
 
 If Gate 3 fails any hard boundary, Candidate A is rejected and Glaze remains CSS fallback plus separately named explicit-source WebGL—not a falsely unified liquid-glass library.
+
+## Gate 3 closure
+
+Gate 3 is complete. Candidate A failed the direct-adoption boundary. The final decision, evidence, and future re-evaluation conditions are recorded in `docs/gates/CANDIDATE-ADOPTION-REPORT.md`.
