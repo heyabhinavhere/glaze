@@ -25,11 +25,16 @@ describe("optical kernel contract", () => {
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("fresnel");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("specular");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("opposing");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("interior_splay");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("optical_scatter");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("contact_shadow");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("caustic_halo");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("elastic_active_distance");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("blur");
   });
 
-  it("leaves pixels outside the lens transparent", () => {
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("if (mask <= 0.001)");
+  it("bounds renderer-native separation and leaves distant pixels transparent", () => {
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("if (material_mask <= 0.001 && halo_alpha <= 0.001)");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("out_color = vec4(0.0)");
   });
 });

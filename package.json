@@ -30,7 +30,8 @@
     "evidence:m2:video": "vitest run tests/m2-explicit-video-artifacts.test.ts",
     "evidence:m1": "vitest run tests/m1-artifacts.test.ts",
     "test:optical-kernel:unit": "vitest run tests/optical-kernel.test.ts",
-    "test:optical-kernel": "playwright test -c playwright.optical-kernel.config.ts tests/optical-kernel.spec.ts"
+    "test:optical-kernel": "playwright test -c playwright.optical-kernel.config.ts tests/optical-kernel.spec.ts",
+    "test:optical-kernel:production": "OPTICAL_KERNEL_PRODUCTION=1 playwright test -c playwright.optical-kernel.config.ts tests/optical-kernel.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

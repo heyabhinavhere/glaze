@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const production = process.env.OPTICAL_KERNEL_PRODUCTION === "1";
+
 export default defineConfig({
   testDir: "./tests",
   outputDir: ".gstack/evidence/optical-kernel/playwright-output",
@@ -25,7 +27,9 @@ export default defineConfig({
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
   webServer: {
-    command: "corepack pnpm --filter playground exec next dev --hostname 127.0.0.1 --port 3188",
+    command: production
+      ? "corepack pnpm --filter playground exec next start --hostname 127.0.0.1 --port 3188"
+      : "corepack pnpm --filter playground exec next dev --hostname 127.0.0.1 --port 3188",
     url: "http://127.0.0.1:3188/optical-kernel",
     reuseExistingServer: true,
     timeout: 120_000,

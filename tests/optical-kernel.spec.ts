@@ -72,13 +72,31 @@ test("renders a real-size semantic WebGL optical control", async ({ page }, test
   await expect(stage).toHaveAttribute("data-renderer", "webgl");
 });
 
-test("selection travels with click and keyboard while DOM semantics stay authoritative", async ({ page }) => {
+test("selection travels with click and keyboard while DOM semantics stay authoritative", async ({ page }, testInfo) => {
   await openKernel(page);
   const group = page.getByRole("radiogroup", { name: "Optical mode" });
   const flow = page.getByRole("radio", { name: "Flow" });
   const form = page.getByRole("radio", { name: "Form" });
   const focus = page.getByRole("radio", { name: "Focus" });
 
+  const captureMotionSample = async (name: string) => {
+    const box = await group.boundingBox();
+    if (!box) throw new Error("missing-control-bounds");
+    const screenshotPath = testInfo.outputPath(`${name}.png`);
+    await page.screenshot({
+      animations: "allow",
+      clip: {
+        x: Math.max(0, box.x - 22),
+        y: Math.max(0, box.y - 22),
+        width: box.width + 44,
+        height: box.height + 44,
+      },
+      path: screenshotPath,
+    });
+    await testInfo.attach(name, { path: screenshotPath, contentType: "image/png" });
+  };
+
+  await captureMotionSample("motion-00-rest");
   await form.click();
   await expect(form).toHaveAttribute("aria-checked", "true");
   await expect(group).toHaveAttribute("data-selected-index", "2");
@@ -94,6 +112,12 @@ test("selection travels with click and keyboard while DOM semantics stay authori
   expect(moving?.selectedPosition).toBeGreaterThan(1);
   expect(moving?.selectedPosition).toBeLessThan(2.2);
   expect(Math.abs(moving?.selectionVelocity ?? 0)).toBeGreaterThan(0.05);
+
+  await captureMotionSample("motion-01-departure");
+  await page.waitForTimeout(55);
+  await captureMotionSample("motion-02-travel");
+  await page.waitForTimeout(420);
+  await captureMotionSample("motion-03-settled");
 
   await form.press("ArrowRight");
   await expect(focus).toHaveAttribute("aria-checked", "true");
@@ -148,6 +172,26 @@ test("compact layout keeps the authored control visible without horizontal overf
   const screenshotPath = testInfo.outputPath("optical-kernel-compact.png");
   await page.screenshot({ animations: "disabled", path: screenshotPath });
   await testInfo.attach("optical-kernel-compact", { path: screenshotPath, contentType: "image/png" });
+});
+
+test("reduced motion snaps selection without velocity deformation", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openKernel(page);
+  await page.getByRole("radio", { name: "Form" }).click();
+  await expect(page.getByRole("radio", { name: "Form" })).toHaveAttribute("aria-checked", "true");
+  await page.waitForTimeout(34);
+
+  const diagnostics = await page.evaluate(() => (
+    window as Window & {
+      __glazeOpticalKernel?: {
+        getDiagnostics(): { selectedPosition: number; selectionVelocity: number };
+      };
+    }
+  ).__glazeOpticalKernel?.getDiagnostics());
+
+  expect(diagnostics).toBeDefined();
+  expect(diagnostics?.selectedPosition).toBe(2);
+  expect(diagnostics?.selectionVelocity).toBe(0);
 });
 
 test("WebGL2 initialization failure preserves a truthful usable fallback", async ({ page }) => {

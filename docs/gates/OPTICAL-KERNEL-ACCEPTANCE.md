@@ -1,6 +1,6 @@
 # Optical Kernel Acceptance Gate
 
-Status: locked before implementation. This gate replaces visual progress-by-assertion with a real-size, inspectable optical proof.
+Status: revised after reference-video review on 2026-08-16. The first implementation passed its mechanical checks but failed owner visual review because its body was too close to the untouched source and its strict outside-pixel rule prohibited grounded optical separation.
 
 ## Purpose
 
@@ -11,6 +11,8 @@ The experiment lives at `/optical-kernel`. It is intentionally one component in 
 ## Reference-derived requirements
 
 - Refraction/displacement is the material. Blur, tint, borders, shadows, and gradients cannot substitute for visible bending of the source.
+- Optical mass must be legible across the full `320 x 64` body at rest. A viewer must not need to hunt for the curved edge to discover the material.
+- The silhouette may produce a narrow renderer-native contact shadow and caustic halo. These are consequences of the same material field, not CSS finish, and must decay to transparent within a bounded region.
 - The lens is a floating control layer. The content layer remains the visual subject.
 - Interaction moves and energizes the lens with light; the resting state stays quieter.
 - A selected segment is communicated by a lens that travels between options, not by a CSS-filled active pill.
@@ -22,7 +24,7 @@ The experiment lives at `/optical-kernel`. It is intentionally one component in 
 - Full-viewport, component-owned animated Canvas 2D source with fine grid lines, rings, color fields, and typography-sized marks. These provide obvious displacement probes.
 - One shared transparent WebGL2 overlay.
 - One real-size three-option segmented control: `320 x 64 CSS px` on desktop and `min(320px, viewport - 32px)` on compact screens.
-- A quiet outer capsule plus a stronger moving selection lens.
+- One coherent outer capsule plus a stronger moving selection deformation. The active region must remain part of the same volume rather than reading as a dark pill stacked on top of glass.
 - Three semantic DOM buttons in a `radiogroup`, with keyboard selection and visible focus.
 
 ## Renderer success path
@@ -30,7 +32,7 @@ The experiment lives at `/optical-kernel`. It is intentionally one component in 
 - Source pixels are explicitly uploaded to a WebGL texture owned by the component.
 - Lens geometry is generated from a signed-distance field.
 - The fragment shader derives thickness, surface normal, refraction offset, restrained channel separation, Fresnel rim, directional specular response, opposing-edge occlusion, and transmitted light.
-- Pixels outside the lens are transparent.
+- Pixels beyond the bounded optical halo are transparent. A narrow renderer-native contact shadow and caustic may extend outside the geometric body.
 - The glass surface uses no CSS `backdrop-filter`, background fill/gradient, border, or box shadow on the WebGL success path.
 - Pointer position affects lighting. Selection motion changes optical geometry rather than cross-fading a CSS decoration.
 
@@ -42,15 +44,17 @@ When WebGL2 is unavailable, initialization fails, or the context is lost, semant
 
 At both `1280 x 720` and `390 x 844`, without zooming or cropping:
 
-1. Background lines and rings visibly change direction or position through the lens, especially at its curved edges.
-2. The selected lens is clearly dimensional because multiple optical cues agree; it must not read as a blurred translucent pill.
-3. Source detail remains visible through the control. Blur is not the dominant cue.
-4. The lens remains legible over both bright and dark moving source regions.
-5. Clicking or using arrow keys moves the selection lens and produces a brief, restrained light response.
-6. Outside-lens source pixels remain visually unchanged.
-7. The control fits the viewport, DOM labels remain readable, and focus is visible.
-8. WebGL failure leaves a usable, truthfully labelled fallback.
-9. There are no uncaught page errors, failed shader compilation, or leaked animation loops after unmount.
+1. Background lines and rings visibly change direction or position across the full lens body, with stronger bending at its curved edges.
+2. The material silhouette is immediately legible at `320 x 64` because full-volume transmission, a coherent bright rim, opposing-edge occlusion, and a narrow contact shadow/caustic agree. It must not rely on a continuous drawn outline.
+3. The selected deformation is dimensional but remains optically continuous with the outer capsule; it must not read as a dark or opaque pill stacked on top.
+4. Source detail remains visible through the control. Blur is not the dominant cue.
+5. The lens remains legible over both bright and dark moving source regions without turning milky or opaque.
+6. Clicking or using arrow keys produces visibly elastic geometry: stretch, edge-lobe deformation, and settling must be apparent across at least three motion samples rather than translating a rigid capsule.
+7. Pixels farther than `14 CSS px` from the material silhouette remain visually unchanged.
+8. DOM labels stay crisp and authoritative above the renderer during rest and motion.
+9. The control fits the viewport, DOM labels remain readable, and focus is visible.
+10. WebGL failure leaves a usable, truthfully labelled fallback.
+11. There are no uncaught page errors, failed shader compilation, or leaked animation loops after unmount.
 
 ## Stop rule
 

@@ -60,6 +60,11 @@ float rounded_box_sdf(vec2 point, vec2 center, vec2 half_size, float radius) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+float smooth_min(float a, float b, float radius) {
+  float blend = clamp(0.5 + 0.5 * (b - a) / radius, 0.0, 1.0);
+  return mix(b, a, blend) - radius * blend * (1.0 - blend);
+}
+
 float capsule_height(vec2 point, vec2 center, vec2 half_size, float radius) {
   float distance_to_edge = rounded_box_sdf(point, center, half_size, radius);
   float inside = smoothstep(1.25, -1.25, distance_to_edge);
@@ -67,10 +72,46 @@ float capsule_height(vec2 point, vec2 center, vec2 half_size, float radius) {
   return inside * mix(0.0, 1.0, pow(bevel, 0.68));
 }
 
-float material_height(vec2 point, vec2 outer_center, vec2 outer_half, float outer_radius, vec2 active_center, vec2 active_half, float active_radius) {
-  float quiet_shell = capsule_height(point, outer_center, outer_half, outer_radius) * 0.24;
-  float active_lens = capsule_height(point, active_center, active_half, active_radius);
-  return max(quiet_shell, active_lens);
+float elastic_active_distance(
+  vec2 point,
+  vec2 active_center,
+  vec2 active_half,
+  float active_radius,
+  float velocity,
+  float speed,
+  float touch_field
+) {
+  float direction = velocity < 0.0 ? -1.0 : 1.0;
+  float base = rounded_box_sdf(point, active_center, active_half, active_radius);
+  float end_axis = max(active_half.x - active_radius, 0.0);
+  vec2 trailing_center = active_center - vec2(direction * (end_axis + speed * 7.0), velocity * 0.75);
+  vec2 leading_center = active_center + vec2(direction * (end_axis + speed * 3.5), -velocity * 0.38);
+  float trailing_lobe = length(point - trailing_center) - active_radius * (1.0 + speed * 0.08);
+  float leading_lobe = length(point - leading_center) - active_radius * (0.94 + speed * 0.05);
+  float elastic = smooth_min(base, trailing_lobe, 7.5 + speed * 2.5);
+  elastic = smooth_min(elastic, leading_lobe, 5.5 + speed * 1.8);
+  float motion_mix = smoothstep(0.07, 0.62, speed);
+  return mix(base, elastic, motion_mix) - touch_field * 2.8;
+}
+
+float material_height(
+  vec2 point,
+  vec2 outer_center,
+  vec2 outer_half,
+  float outer_radius,
+  vec2 active_center,
+  vec2 active_half,
+  float active_radius,
+  float velocity,
+  float speed,
+  float touch_field
+) {
+  float outer_volume = capsule_height(point, outer_center, outer_half, outer_radius) * 0.72;
+  float active_distance = elastic_active_distance(point, active_center, active_half, active_radius, velocity, speed, touch_field);
+  float active_inside = smoothstep(1.25, -1.25, active_distance);
+  float active_bevel = smoothstep(0.0, min(18.0, active_radius * 0.64), -active_distance);
+  float active_volume = active_inside * mix(0.0, 1.0, pow(active_bevel, 0.64));
+  return max(outer_volume, active_volume);
 }
 
 vec3 source_sample(vec2 uv, vec2 chroma_offset, float edge_energy) {
@@ -95,54 +136,101 @@ void main() {
 
   float inset = 4.0;
   float segment_width = (u_control_rect.z - inset * 2.0) / 3.0;
+  float velocity = clamp(u_selection_velocity / 7.5, -1.0, 1.0);
+  float speed = abs(velocity);
   vec2 active_center = vec2(
-    u_control_rect.x + inset + segment_width * (u_selected_position + 0.5),
-    outer_center.y
+    u_control_rect.x + inset + segment_width * (u_selected_position + 0.5) + velocity * 3.5,
+    outer_center.y + velocity * 0.8
   );
-  float travel_stretch = min(abs(u_selection_velocity) * 1.35, 7.0);
   vec2 active_half = vec2(
-    segment_width * 0.5 + 1.5 + u_energy * 1.6 + travel_stretch,
-    outer_half.y - inset + u_energy * 0.8 - travel_stretch * 0.18
+    segment_width * 0.5 + 1.5 + u_energy * 1.4 + speed * 5.5,
+    outer_half.y - 1.5 + u_energy * 1.2 - speed * 1.8
   );
   float active_radius = active_half.y;
 
+  vec2 touch_delta = point - u_pointer;
+  float touch_distance = length(touch_delta);
+  float touch_field = exp(-touch_distance * touch_distance / 3200.0) * u_energy;
+
   float outer_distance = rounded_box_sdf(point, outer_center, outer_half, outer_radius);
-  float active_distance = rounded_box_sdf(point, active_center, active_half, active_radius);
+  float active_distance = elastic_active_distance(
+    point,
+    active_center,
+    active_half,
+    active_radius,
+    velocity,
+    speed,
+    touch_field
+  );
+  float material_distance = smooth_min(outer_distance, active_distance, 4.5);
   float outer_mask = smoothstep(1.1, -1.1, outer_distance);
   float active_mask = smoothstep(1.1, -1.1, active_distance);
-  float mask = max(outer_mask * 0.72, active_mask);
-  if (mask <= 0.001) {
+  float material_mask = smoothstep(1.15, -1.15, material_distance);
+
+  float shifted_outer_distance = rounded_box_sdf(point, outer_center + vec2(0.0, 4.5), outer_half + vec2(1.5, 1.0), outer_radius + 1.0);
+  float shifted_active_distance = elastic_active_distance(
+    point,
+    active_center + vec2(velocity * 1.4, 4.0),
+    active_half + vec2(1.2, 0.8),
+    active_radius + 0.8,
+    velocity,
+    speed,
+    touch_field
+  );
+  float contact_distance = smooth_min(shifted_outer_distance, shifted_active_distance, 5.0);
+  float contact_shadow = smoothstep(10.0, -1.0, contact_distance) * (1.0 - material_mask);
+  float outside_distance = max(material_distance, 0.0);
+  float caustic_halo = exp(-pow((outside_distance - 2.4) / 2.2, 2.0)) * (1.0 - material_mask);
+  float lower_side = smoothstep(-0.15, 0.85, (point.y - outer_center.y) / max(outer_half.y, 1.0));
+  float halo_alpha = contact_shadow * mix(0.035, 0.115, lower_side) + caustic_halo * mix(0.018, 0.052, 1.0 - lower_side);
+  halo_alpha *= 1.0 - smoothstep(9.0, 14.0, outside_distance);
+
+  if (material_mask <= 0.001 && halo_alpha <= 0.001) {
     out_color = vec4(0.0);
     return;
   }
 
-  float sample_step = 1.35;
-  float height_left = material_height(point - vec2(sample_step, 0.0), outer_center, outer_half, outer_radius, active_center, active_half, active_radius);
-  float height_right = material_height(point + vec2(sample_step, 0.0), outer_center, outer_half, outer_radius, active_center, active_half, active_radius);
-  float height_up = material_height(point - vec2(0.0, sample_step), outer_center, outer_half, outer_radius, active_center, active_half, active_radius);
-  float height_down = material_height(point + vec2(0.0, sample_step), outer_center, outer_half, outer_radius, active_center, active_half, active_radius);
-  vec2 height_gradient = vec2(height_right - height_left, height_down - height_up) / (sample_step * 2.0);
-  float height = material_height(point, outer_center, outer_half, outer_radius, active_center, active_half, active_radius);
+  if (material_mask <= 0.001) {
+    vec3 halo_color = mix(vec3(0.005, 0.018, 0.032), vec3(0.48, 0.92, 1.0), caustic_halo * 0.34);
+    out_color = vec4(halo_color, halo_alpha);
+    return;
+  }
 
+  float sample_step = 1.35;
+  float height_left = material_height(point - vec2(sample_step, 0.0), outer_center, outer_half, outer_radius, active_center, active_half, active_radius, velocity, speed, touch_field);
+  float height_right = material_height(point + vec2(sample_step, 0.0), outer_center, outer_half, outer_radius, active_center, active_half, active_radius, velocity, speed, touch_field);
+  float height_up = material_height(point - vec2(0.0, sample_step), outer_center, outer_half, outer_radius, active_center, active_half, active_radius, velocity, speed, touch_field);
+  float height_down = material_height(point + vec2(0.0, sample_step), outer_center, outer_half, outer_radius, active_center, active_half, active_radius, velocity, speed, touch_field);
+  vec2 height_gradient = vec2(height_right - height_left, height_down - height_up) / (sample_step * 2.0);
+  float height = material_height(point, outer_center, outer_half, outer_radius, active_center, active_half, active_radius, velocity, speed, touch_field);
+
+  vec2 outer_local = (point - outer_center) / max(outer_half, vec2(1.0));
   vec2 active_local = point - active_center;
-  float active_edge = smoothstep(-18.0, -2.5, active_distance) * active_mask;
-  float outer_edge = smoothstep(-14.0, -2.0, outer_distance) * outer_mask;
-  float edge_energy = clamp(max(active_edge * active_mask, outer_edge * outer_mask * 0.36), 0.0, 1.0);
+  vec2 active_local_normalized = active_local / max(active_half, vec2(1.0));
+  float active_edge = smoothstep(-19.0, -1.5, active_distance) * active_mask;
+  float outer_edge = smoothstep(-17.0, -1.5, outer_distance) * outer_mask;
+  float edge_energy = clamp(max(active_edge, outer_edge * 0.72), 0.0, 1.0);
 
   vec2 lens_normal = normalize(height_gradient + vec2(0.00001));
-  float gradient_strength = clamp(length(height_gradient) * 6.5, 0.0, 1.0);
-  vec2 edge_bend = lens_normal * mix(3.5, 14.0, active_mask) * gradient_strength;
-  vec2 magnification = -active_local * (0.018 + 0.012 * active_mask) * height * active_mask;
-  vec2 touch_delta = point - u_pointer;
-  float touch_distance = length(touch_delta);
-  float touch_field = exp(-touch_distance * touch_distance / 4200.0) * u_energy;
+  float gradient_strength = clamp(length(height_gradient) * 8.5, 0.0, 1.0);
+  vec2 edge_bend = lens_normal * mix(4.8, 12.8, active_mask) * gradient_strength;
+  vec2 interior_splay = -outer_local * vec2(3.8, 2.5) * height * outer_mask;
+  interior_splay += -active_local_normalized * vec2(4.1, 2.8) * height * active_mask;
+  interior_splay.x += -velocity * (1.0 - min(abs(active_local_normalized.x), 1.0)) * active_mask * 3.2;
   vec2 touch_bend = touch_distance > 0.5
-    ? normalize(touch_delta) * touch_field * 2.2
+    ? normalize(touch_delta) * touch_field * 3.4
     : vec2(0.0);
-  vec2 displaced_point = point + edge_bend + magnification + touch_bend;
+  vec2 displaced_point = point + edge_bend + interior_splay + touch_bend;
   vec2 displaced_uv = vec2(displaced_point.x / u_resolution.x, 1.0 - displaced_point.y / u_resolution.y);
-  vec2 chroma_offset = lens_normal * edge_energy * 1.05 / u_resolution;
+  vec2 chroma_offset = lens_normal * edge_energy * 1.28 / u_resolution;
   vec3 source_color = source_sample(displaced_uv, chroma_offset, edge_energy);
+  vec2 scatter_step = vec2(0.85) / u_resolution;
+  vec3 optical_scatter = source_color * 4.0;
+  optical_scatter += texture(u_source, clamp(displaced_uv + vec2(scatter_step.x, 0.0), vec2(0.002), vec2(0.998))).rgb;
+  optical_scatter += texture(u_source, clamp(displaced_uv - vec2(scatter_step.x, 0.0), vec2(0.002), vec2(0.998))).rgb;
+  optical_scatter += texture(u_source, clamp(displaced_uv + vec2(0.0, scatter_step.y), vec2(0.002), vec2(0.998))).rgb;
+  optical_scatter += texture(u_source, clamp(displaced_uv - vec2(0.0, scatter_step.y), vec2(0.002), vec2(0.998))).rgb;
+  source_color = mix(source_color, optical_scatter * 0.125, height * 0.34);
   float source_luma = luminance(source_color);
 
   vec3 surface_normal = normalize(vec3(-height_gradient * 8.2, 1.0));
@@ -156,15 +244,20 @@ void main() {
   float opposing = max(-dot(surface_normal.xy, light_direction.xy), 0.0);
   float traveling_light = 0.5 + 0.5 * sin(u_time * 0.0018 + active_center.x * 0.012);
 
-  float rim_direction = mix(0.18, 1.0, smoothstep(-0.3, 0.72, light_facing - opposing));
-  float adaptive_dim = mix(0.008, 0.045, source_luma) * (0.28 + active_mask * 0.72);
-  vec3 transmitted = source_color * (1.0 - adaptive_dim);
-  transmitted += vec3(0.72, 0.93, 1.0) * height * mix(0.008, 0.026, 1.0 - source_luma);
-  transmitted += vec3(0.88, 0.97, 1.0) * edge_energy * (fresnel * 0.22 * rim_direction + specular * 0.68 + light_facing * 0.065);
-  transmitted += vec3(0.64, 0.91, 1.0) * touch_field * (0.035 + traveling_light * 0.02);
-  transmitted *= 1.0 - opposing * edge_energy * mix(0.08, 0.18, source_luma);
+  float rim_direction = mix(0.2, 1.0, smoothstep(-0.3, 0.72, light_facing - opposing));
+  float upper_body = 1.0 - smoothstep(-0.72, 0.48, outer_local.y);
+  float lower_body = smoothstep(0.12, 0.92, outer_local.y);
+  float adaptive_dim = mix(0.008, 0.026, source_luma) * mix(0.7, 1.0, active_mask);
+  vec3 optical_lift = vec3(0.09, 0.18, 0.205) * height;
+  vec3 transmitted = 1.0 - (1.0 - source_color) * (1.0 - optical_lift);
+  transmitted *= 1.0 - adaptive_dim;
+  transmitted += vec3(0.68, 0.91, 1.0) * upper_body * height * 0.018;
+  transmitted += vec3(0.92, 0.99, 1.0) * edge_energy * (fresnel * 0.24 * rim_direction + specular * 0.48 + light_facing * 0.045);
+  transmitted += vec3(0.58, 0.9, 1.0) * touch_field * (0.038 + traveling_light * 0.022);
+  transmitted *= 1.0 - opposing * edge_energy * mix(0.075, 0.16, source_luma);
+  transmitted *= 1.0 - lower_body * edge_energy * 0.045;
 
-  float coverage = clamp(mask * (0.94 + edge_energy * 0.06), 0.0, 1.0);
+  float coverage = clamp(material_mask * (0.965 + edge_energy * 0.035), 0.0, 1.0);
   out_color = vec4(transmitted, coverage);
 }`;
 
@@ -329,8 +422,8 @@ export class OpticalKernelRenderer {
       this.selectionVelocity = 0;
       this.energy += (this.targetEnergy - this.energy) * Math.min(1, delta * 8);
     } else {
-      const springForce = (this.targetPosition - this.selectedPosition) * 235;
-      const dampingForce = this.selectionVelocity * 24;
+      const springForce = (this.targetPosition - this.selectedPosition) * 150;
+      const dampingForce = this.selectionVelocity * 18.5;
       this.selectionVelocity += (springForce - dampingForce) * delta;
       this.selectedPosition += this.selectionVelocity * delta;
       this.energy += (this.targetEnergy - this.energy) * Math.min(1, delta * 10);
@@ -378,7 +471,7 @@ export class OpticalKernelRenderer {
       gl.uniform1f(requiredUniform(gl, this.program, "u_selection_velocity"), this.selectionVelocity);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       this.frames += 1;
-      this.lastRenderMs = performance.now() - renderStart;
+      this.lastRenderMs = Math.max(performance.now() - renderStart, 0.001);
       this.maxRenderMs = Math.max(this.maxRenderMs, this.lastRenderMs);
       return true;
     } catch (error) {
