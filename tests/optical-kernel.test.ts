@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  OPTICAL_KERNEL_BACKGROUNDS,
   OPTICAL_KERNEL_CONTRACT,
   OPTICAL_KERNEL_FRAGMENT_SHADER,
   OPTICAL_KERNEL_OPTIONS,
@@ -16,6 +17,12 @@ describe("optical kernel contract", () => {
       renderer: "webgl2-sdf-refraction",
     });
     expect(OPTICAL_KERNEL_OPTIONS).toEqual(["Focus", "Flow", "Form"]);
+    expect(OPTICAL_KERNEL_BACKGROUNDS).toEqual([
+      { id: "reference", label: "Reference", kind: "generated" },
+      { id: "architecture", label: "Architecture", kind: "image", src: "/backgrounds/bg-3.jpg", focalX: 0.5, focalY: 0.52 },
+      { id: "color", label: "Color", kind: "image", src: "/backgrounds/bg-4.jpg", focalX: 0.5, focalY: 0.48 },
+      { id: "dark", label: "Dark", kind: "image", src: "/backgrounds/bg-2.jpg", focalX: 0.5, focalY: 0.43 },
+    ]);
   });
 
   it("implements renderer-native optical cues rather than blur finishing", () => {
@@ -31,6 +38,8 @@ describe("optical kernel contract", () => {
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("caustic_halo");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("elastic_active_distance");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("blur");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("/backgrounds/");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("u_background");
   });
 
   it("bounds renderer-native separation and leaves distant pixels transparent", () => {

@@ -1,5 +1,15 @@
 export const OPTICAL_KERNEL_OPTIONS = ["Focus", "Flow", "Form"] as const;
 
+export const OPTICAL_KERNEL_BACKGROUNDS = Object.freeze([
+  Object.freeze({ id: "reference", label: "Reference", kind: "generated" as const }),
+  Object.freeze({ id: "architecture", label: "Architecture", kind: "image" as const, src: "/backgrounds/bg-3.jpg", focalX: 0.5, focalY: 0.52 }),
+  Object.freeze({ id: "color", label: "Color", kind: "image" as const, src: "/backgrounds/bg-4.jpg", focalX: 0.5, focalY: 0.48 }),
+  Object.freeze({ id: "dark", label: "Dark", kind: "image" as const, src: "/backgrounds/bg-2.jpg", focalX: 0.5, focalY: 0.43 }),
+]);
+
+export type OpticalKernelBackground = (typeof OPTICAL_KERNEL_BACKGROUNDS)[number];
+export type OpticalKernelBackgroundId = OpticalKernelBackground["id"];
+
 export const OPTICAL_KERNEL_CONTRACT = Object.freeze({
   width: 320,
   height: 64,
@@ -532,6 +542,8 @@ export function drawOpticalSource(
   context: CanvasRenderingContext2D,
   time: number,
   reducedMotion: boolean,
+  background: OpticalKernelBackground = OPTICAL_KERNEL_BACKGROUNDS[0],
+  image?: HTMLImageElement,
 ): void {
   const dpr = Math.min(OPTICAL_KERNEL_CONTRACT.maxDpr, window.devicePixelRatio || 1);
   const width = canvas.width / dpr;
@@ -540,6 +552,56 @@ export function drawOpticalSource(
 
   context.save();
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (background.kind === "image" && image?.complete && image.naturalWidth > 0) {
+    drawImageBackground(context, image, width, height, background.focalX, background.focalY, motionTime);
+    context.restore();
+    return;
+  }
+
+  drawReferenceBackground(context, width, height, motionTime);
+  context.restore();
+}
+
+function drawImageBackground(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  width: number,
+  height: number,
+  focalX: number,
+  focalY: number,
+  motionTime: number,
+): void {
+  const motionX = Math.sin(motionTime * 0.18) * 0.012;
+  const motionY = Math.cos(motionTime * 0.14) * 0.009;
+  const destinationScale = 1.035;
+  const destinationWidth = width * destinationScale;
+  const destinationHeight = height * destinationScale;
+  const scale = Math.max(destinationWidth / image.naturalWidth, destinationHeight / image.naturalHeight);
+  const sourceWidth = destinationWidth / scale;
+  const sourceHeight = destinationHeight / scale;
+  const sourceX = Math.max(0, Math.min(image.naturalWidth - sourceWidth, (image.naturalWidth - sourceWidth) * (focalX + motionX)));
+  const sourceY = Math.max(0, Math.min(image.naturalHeight - sourceHeight, (image.naturalHeight - sourceHeight) * (focalY + motionY)));
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    (width - destinationWidth) * 0.5,
+    (height - destinationHeight) * 0.5,
+    destinationWidth,
+    destinationHeight,
+  );
+}
+
+function drawReferenceBackground(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  motionTime: number,
+): void {
   context.fillStyle = "#07131f";
   context.fillRect(0, 0, width, height);
 
@@ -607,6 +669,4 @@ export function drawOpticalSource(
   context.textBaseline = "middle";
   context.fillStyle = "rgba(235, 249, 255, 0.18)";
   context.fillText("BEND LIGHT", width * 0.5, height * 0.53);
-
-  context.restore();
 }

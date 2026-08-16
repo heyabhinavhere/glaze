@@ -19,13 +19,13 @@ test("renders a real-size semantic WebGL optical control", async ({ page }, test
 
   await expect(control).toBeVisible();
   await expect(output).toBeVisible();
-  await expect(page.getByRole("radio")).toHaveCount(3);
-  await expect(page.getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
+  await expect(control.getByRole("radio")).toHaveCount(3);
+  await expect(control.getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
 
   const mechanics = await page.evaluate(() => {
-    const controlElement = document.querySelector<HTMLElement>('[role="radiogroup"]');
+    const controlElement = document.querySelector<HTMLElement>('[role="radiogroup"][aria-label="Optical mode"]');
     const outputElement = document.querySelector<HTMLCanvasElement>("canvas[data-optical-output]");
-    const option = document.querySelector<HTMLElement>('[role="radio"]');
+    const option = controlElement?.querySelector<HTMLElement>('[role="radio"]');
     if (!controlElement || !outputElement || !option) return null;
     const controlStyle = getComputedStyle(controlElement);
     const optionStyle = getComputedStyle(option);
@@ -70,6 +70,46 @@ test("renders a real-size semantic WebGL optical control", async ({ page }, test
   await page.screenshot({ animations: "disabled", path: screenshotPath });
   await testInfo.attach("optical-kernel-desktop", { path: screenshotPath, contentType: "image/png" });
   await expect(stage).toHaveAttribute("data-renderer", "webgl");
+});
+
+test("switches across a four-source matrix without changing the optical material", async ({ page }, testInfo) => {
+  const stage = await openKernel(page);
+  const sourcePicker = page.getByRole("radiogroup", { name: "Background scene" });
+  const opticalControl = page.getByRole("radiogroup", { name: "Optical mode" });
+  const backgrounds = [
+    { id: "reference", label: "Reference" },
+    { id: "architecture", label: "Architecture" },
+    { id: "color", label: "Color" },
+    { id: "dark", label: "Dark" },
+  ] as const;
+
+  await expect(sourcePicker.getByRole("radio")).toHaveCount(backgrounds.length);
+  await expect(opticalControl.getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
+
+  const initialDiagnostics = await page.evaluate(() => (
+    window as Window & { __glazeOpticalKernel?: { getDiagnostics(): { frames: number; uploads: number } } }
+  ).__glazeOpticalKernel?.getDiagnostics());
+
+  for (const background of backgrounds) {
+    await sourcePicker.getByRole("radio", { name: background.label }).click();
+    await expect(stage).toHaveAttribute("data-background", background.id);
+    await expect(stage).toHaveAttribute("data-background-ready", "true");
+    await expect(stage).toHaveAttribute("data-renderer", "webgl");
+    await expect(opticalControl.getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
+    await page.waitForTimeout(80);
+
+    const screenshotPath = testInfo.outputPath(`background-${background.id}.png`);
+    await page.screenshot({ animations: "disabled", path: screenshotPath });
+    await testInfo.attach(`background-${background.id}`, { path: screenshotPath, contentType: "image/png" });
+  }
+
+  const finalDiagnostics = await page.evaluate(() => (
+    window as Window & { __glazeOpticalKernel?: { getDiagnostics(): { frames: number; uploads: number } } }
+  ).__glazeOpticalKernel?.getDiagnostics());
+  expect(initialDiagnostics).toBeDefined();
+  expect(finalDiagnostics).toBeDefined();
+  expect(finalDiagnostics?.frames).toBeGreaterThan(initialDiagnostics?.frames ?? 0);
+  expect(finalDiagnostics?.uploads).toBe(finalDiagnostics?.frames);
 });
 
 test("selection travels with click and keyboard while DOM semantics stay authoritative", async ({ page }, testInfo) => {
@@ -169,6 +209,14 @@ test("compact layout keeps the authored control visible without horizontal overf
   expect(geometry.left).toBeGreaterThanOrEqual(16);
   expect(geometry.right).toBeLessThanOrEqual(374);
 
+  const sourcePickerGeometry = await page.getByRole("radiogroup", { name: "Background scene" }).evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, width: rect.width };
+  });
+  expect(sourcePickerGeometry.left).toBeGreaterThanOrEqual(16);
+  expect(sourcePickerGeometry.right).toBeLessThanOrEqual(374);
+  expect(sourcePickerGeometry.width).toBeLessThanOrEqual(358);
+
   const screenshotPath = testInfo.outputPath("optical-kernel-compact.png");
   await page.screenshot({ animations: "disabled", path: screenshotPath });
   await testInfo.attach("optical-kernel-compact", { path: screenshotPath, contentType: "image/png" });
@@ -206,9 +254,10 @@ test("WebGL2 initialization failure preserves a truthful usable fallback", async
   const stage = page.locator("section[data-renderer]");
   await expect(stage).toHaveAttribute("data-renderer", "fallback");
   await expect(stage).toHaveAttribute("data-fallback-reason", "webgl2-unavailable");
-  await expect(page.getByRole("radio")).toHaveCount(3);
-  await page.getByRole("radio", { name: "Form" }).click();
-  await expect(page.getByRole("radio", { name: "Form" })).toHaveAttribute("aria-checked", "true");
+  const control = page.getByRole("radiogroup", { name: "Optical mode" });
+  await expect(control.getByRole("radio")).toHaveCount(3);
+  await control.getByRole("radio", { name: "Form" }).click();
+  await expect(control.getByRole("radio", { name: "Form" })).toHaveAttribute("aria-checked", "true");
 });
 
 test("context loss fails closed to the semantic fallback", async ({ page }) => {
@@ -219,5 +268,5 @@ test("context loss fails closed to the semantic fallback", async ({ page }) => {
   const stage = page.locator("section[data-renderer]");
   await expect(stage).toHaveAttribute("data-renderer", "fallback");
   await expect(stage).toHaveAttribute("data-fallback-reason", "webgl-context-lost");
-  await expect(page.getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radiogroup", { name: "Optical mode" }).getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
 });

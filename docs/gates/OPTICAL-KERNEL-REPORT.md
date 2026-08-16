@@ -14,6 +14,8 @@ The 2026-08-15 candidate passed its mechanical suite but was visually rejected: 
 
 Revision 2 is tuned from the owner's supplied `342 x 65` reference and 14.658-second motion recording. The real-size control now applies refraction and adaptive transmission across the full outer volume, retains a stronger selection deformation without an opaque fill, produces a narrow renderer-native contact shadow/caustic, and deforms its signed-distance geometry from spring velocity. This is a candidate for owner review, not a self-declared visual pass.
 
+The review route now includes a four-source matrix: animated reference geometry, detailed architecture, bright ribbed color, and a dark highlight scene. The same renderer instance and shader remain active while only the same-origin Canvas 2D source pixels change. This makes bright/dark/detail robustness directly inspectable without background-specific optical tuning.
+
 This verdict is intentionally narrow. It proves the owned-source optical kernel and fallback contract. It does not prove arbitrary DOM capture, video sources, a stable public package API, a DialKit-style workbench, device performance, or release readiness.
 
 ## Acceptance results
@@ -28,24 +30,25 @@ This verdict is intentionally narrow. It proves the owned-source optical kernel 
 | Semantic DOM | Pass | Three DOM radio buttons remain authoritative, keyboard-operable, focusable, and layered above the WebGL canvas. |
 | No CSS material on success path | Pass | Browser assertions confirm the control and buttons have transparent backgrounds, zero borders, no box shadow, and no backdrop filter. |
 | Cross-browser mechanics | Pass | Chromium, Firefox, and WebKit activate WebGL, preserve authored desktop/compact geometry, advance source/output frames, exercise rest/departure/travel/settled states, and retain semantic/fallback behavior. |
+| Multi-source robustness harness | Pass | Four accessible source choices switch same-origin pixels while the material shader, selected mode, and renderer instance remain fixed; every source is captured in each browser run. Visual quality still requires owner review. |
 | Truthful failure handling | Pass | Both WebGL2 initialization failure and context loss expose `data-renderer="fallback"`, preserve semantics, and report a reason. |
 | Production build | Pass | Next.js 16.2.3 production build completed and the static `/optical-kernel` route loaded without browser warnings, errors, or development overlays. |
 
 ## Verification run
 
-- `corepack pnpm --filter playground build` — pass
-- `corepack pnpm --filter playground typecheck` — pass
-- `corepack pnpm --filter playground lint` — pass with two unrelated pre-existing `<img>` warnings outside this route
+- `corepack pnpm build` — pass
+- `corepack pnpm typecheck` — pass
+- `corepack pnpm lint` — pass with two unrelated pre-existing `<img>` warnings outside this route
 - `corepack pnpm test:optical-kernel:unit` — 3/3 pass
 - Focused Chromium browser checks and reference-derived motion capture — pass
-- `corepack pnpm test:optical-kernel` — 21/21 pass across Chromium, Firefox, and WebKit, including reduced motion
-- `corepack pnpm test:optical-kernel:production` — 21/21 pass against the optimized Next.js server across Chromium, Firefox, and WebKit
+- `corepack pnpm test:optical-kernel` — 24/24 pass across Chromium, Firefox, and WebKit, including the four-source matrix and reduced motion
+- `corepack pnpm test:optical-kernel:production` — 24/24 pass against the optimized Next.js server across Chromium, Firefox, and WebKit
 - Owner review at `1280 x 720` and `390 x 844` — pending
 
 ## Architecture proven
 
 ```text
-owned Canvas 2D source
+switchable owned Canvas 2D sources
         |
         | texture upload each visible frame
         v
@@ -70,6 +73,7 @@ The public success path no longer depends on browser backdrop capture or arbitra
 - Context restoration currently fails closed and requires remount instead of rebuilding GPU resources in place.
 - The source adapter is Canvas 2D only. Video and other explicit GPU-safe sources remain separate milestones.
 - The current shader values are internal experimental constants, not a frozen public schema.
+- The existing image fixtures are suitable for this internal preview; their provenance/license must be resolved before any public distribution that bundles them.
 - The existing CSS-first V1 remains the fallback/release baseline and must not be represented as this renderer.
 
 ## Next gate after owner visual acceptance

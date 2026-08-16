@@ -5,8 +5,11 @@ import styles from "../optical-kernel.module.css";
 import {
   drawOpticalSource,
   OpticalKernelRenderer,
+  OPTICAL_KERNEL_BACKGROUNDS,
   OPTICAL_KERNEL_OPTIONS,
   resizeSourceCanvas,
+  type OpticalKernelBackground,
+  type OpticalKernelBackgroundId,
 } from "../_lib/optical-kernel-renderer";
 
 type RendererState = "initializing" | "webgl" | "fallback";
@@ -25,9 +28,41 @@ export function OpticalKernelExperiment() {
   const controlRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<OpticalKernelRenderer | null>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const backgroundOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const backgroundRef = useRef<OpticalKernelBackground>(OPTICAL_KERNEL_BACKGROUNDS[0]);
+  const backgroundImagesRef = useRef<Partial<Record<OpticalKernelBackgroundId, HTMLImageElement>>>({});
   const [selectedIndex, setSelectedIndex] = useState(INITIAL_SELECTED_INDEX);
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
+  const [readyBackgrounds, setReadyBackgrounds] = useState<ReadonlySet<OpticalKernelBackgroundId>>(
+    () => new Set<OpticalKernelBackgroundId>(["reference"]),
+  );
   const [rendererState, setRendererState] = useState<RendererState>("initializing");
   const [fallbackReason, setFallbackReason] = useState("renderer-initializing");
+
+  const selectedBackground = OPTICAL_KERNEL_BACKGROUNDS[backgroundIndex];
+
+  useEffect(() => {
+    let cancelled = false;
+    const images: HTMLImageElement[] = [];
+
+    for (const background of OPTICAL_KERNEL_BACKGROUNDS) {
+      if (background.kind !== "image") continue;
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => {
+        if (cancelled) return;
+        backgroundImagesRef.current[background.id] = image;
+        setReadyBackgrounds((current) => new Set(current).add(background.id));
+      };
+      image.src = background.src;
+      images.push(image);
+    }
+
+    return () => {
+      cancelled = true;
+      for (const image of images) image.onload = null;
+    };
+  }, []);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -61,7 +96,15 @@ export function OpticalKernelExperiment() {
         if (destroyed) return;
         const context = resizeSourceCanvas(source);
         if (context) {
-          drawOpticalSource(source, context, time, reducedMotionQuery.matches);
+          const background = backgroundRef.current;
+          drawOpticalSource(
+            source,
+            context,
+            time,
+            reducedMotionQuery.matches,
+            background,
+            backgroundImagesRef.current[background.id],
+          );
           const rendered = renderer.render(time, reducedMotionQuery.matches);
           if (rendered && !announcedWebGL) {
             announcedWebGL = true;
@@ -74,7 +117,7 @@ export function OpticalKernelExperiment() {
     } catch (error) {
       handleFallback(error instanceof Error ? error.message : "renderer-initialization-failed");
       const context = resizeSourceCanvas(source);
-      if (context) drawOpticalSource(source, context, 0, true);
+      if (context) drawOpticalSource(source, context, 0, true, backgroundRef.current);
     }
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -106,6 +149,12 @@ export function OpticalKernelExperiment() {
     if (focus) optionRefs.current[index]?.focus();
   };
 
+  const selectBackground = (index: number, focus = false) => {
+    backgroundRef.current = OPTICAL_KERNEL_BACKGROUNDS[index];
+    setBackgroundIndex(index);
+    if (focus) backgroundOptionRefs.current[index]?.focus();
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     let nextIndex = selectedIndex;
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -123,12 +172,31 @@ export function OpticalKernelExperiment() {
     selectOption(nextIndex, true);
   };
 
+  const handleBackgroundKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    let nextIndex = backgroundIndex;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextIndex = (backgroundIndex + 1) % OPTICAL_KERNEL_BACKGROUNDS.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextIndex = (backgroundIndex - 1 + OPTICAL_KERNEL_BACKGROUNDS.length) % OPTICAL_KERNEL_BACKGROUNDS.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = OPTICAL_KERNEL_BACKGROUNDS.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    selectBackground(nextIndex, true);
+  };
+
   return (
     <main className={styles.page}>
       <section
         ref={stageRef}
         className={styles.stage}
         data-renderer={rendererState}
+        data-background={selectedBackground.id}
+        data-background-ready={readyBackgrounds.has(selectedBackground.id)}
         data-fallback-reason={rendererState === "fallback" ? fallbackReason : undefined}
         aria-labelledby="optical-kernel-title"
       >
@@ -143,8 +211,31 @@ export function OpticalKernelExperiment() {
         <header className={styles.header}>
           <p>Glaze / renderer gate</p>
           <h1 id="optical-kernel-title">One lens. Real pixels.</h1>
-          <span>WebGL2 optical kernel · 320 × 64</span>
+          <span>Same optical kernel · {selectedBackground.label} source</span>
         </header>
+
+        <div
+          className={styles.backgroundPicker}
+          role="radiogroup"
+          aria-label="Background scene"
+          onKeyDown={handleBackgroundKeyDown}
+        >
+          <span className={styles.backgroundPickerLabel} aria-hidden="true">Source</span>
+          {OPTICAL_KERNEL_BACKGROUNDS.map((background, index) => (
+            <button
+              ref={(node) => { backgroundOptionRefs.current[index] = node; }}
+              className={styles.backgroundOption}
+              key={background.id}
+              type="button"
+              role="radio"
+              aria-checked={backgroundIndex === index}
+              tabIndex={backgroundIndex === index ? 0 : -1}
+              onClick={() => selectBackground(index)}
+            >
+              {background.label}
+            </button>
+          ))}
+        </div>
 
         <div
           ref={controlRef}
@@ -177,9 +268,11 @@ export function OpticalKernelExperiment() {
             <span className={styles.srOnly} aria-live="polite">
               Renderer: {rendererState === "fallback" ? `fallback, ${fallbackReason}` : rendererState}
             </span>
-            {rendererState === "webgl" ? "Live source · refractive output" : "Accessible fallback"}
+            {rendererState === "webgl"
+              ? `${selectedBackground.label} source · refractive output`
+              : "Accessible fallback"}
           </p>
-          <p>Move, click, or use arrow keys</p>
+          <p>Switch source · material stays fixed</p>
         </footer>
       </section>
     </main>

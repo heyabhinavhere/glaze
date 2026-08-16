@@ -6,7 +6,7 @@ Status: revised after reference-video review on 2026-08-16. The first implementa
 
 Prove that Glaze can render a small interactive control as a transparent, refractive, responsive lens on the web. This is a renderer gate, not a library API, workbench, documentation, or release gate.
 
-The experiment lives at `/optical-kernel`. It is intentionally one component in one owned scene so that source capture, optical geometry, interaction, and semantic HTML can be evaluated without arbitrary-DOM capture complexity.
+The experiment lives at `/optical-kernel`. It is intentionally one component with a small set of owned-source scenes so that source capture, optical geometry, interaction, and semantic HTML can be evaluated without arbitrary-DOM capture complexity or per-background material tuning.
 
 ## Reference-derived requirements
 
@@ -21,7 +21,8 @@ The experiment lives at `/optical-kernel`. It is intentionally one component in 
 
 ## Fixed experiment
 
-- Full-viewport, component-owned animated Canvas 2D source with fine grid lines, rings, color fields, and typography-sized marks. These provide obvious displacement probes.
+- Four switchable, component-owned Canvas 2D sources: the animated geometric reference plus same-origin architecture, bright-color, and dark high-contrast image fixtures. These provide materially different displacement and visibility probes.
+- Background switching changes only the uploaded source pixels. Lens geometry, shader code, optical constants, selected segment, and renderer instance remain fixed.
 - One shared transparent WebGL2 overlay.
 - One real-size three-option segmented control: `320 x 64 CSS px` on desktop and `min(320px, viewport - 32px)` on compact screens.
 - One coherent outer capsule plus a stronger moving selection deformation. The active region must remain part of the same volume rather than reading as a dark pill stacked on top of glass.
@@ -55,6 +56,7 @@ At both `1280 x 720` and `390 x 844`, without zooming or cropping:
 9. The control fits the viewport, DOM labels remain readable, and focus is visible.
 10. WebGL failure leaves a usable, truthfully labelled fallback.
 11. There are no uncaught page errors, failed shader compilation, or leaked animation loops after unmount.
+12. Switching among all four sources preserves the WebGL renderer, selected optical mode, frame/upload progression, and fixed material shader.
 
 ## Stop rule
 

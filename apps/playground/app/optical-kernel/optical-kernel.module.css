@@ -74,6 +74,52 @@
   color: rgb(223 245 255 / 64%);
 }
 
+.backgroundPicker {
+  position: absolute;
+  z-index: 4;
+  top: clamp(24px, 5vw, 54px);
+  right: clamp(20px, 5vw, 64px);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgb(220 244 255 / 16%);
+  border-radius: 12px;
+  background: rgb(5 15 24 / 88%);
+  box-shadow: 0 8px 24px rgb(0 7 14 / 22%);
+}
+
+.backgroundPickerLabel {
+  padding: 0 8px;
+  color: rgb(220 244 255 / 48%);
+  font: 650 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.backgroundOption {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(231 246 255 / 64%);
+  font: 650 11px/1 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.backgroundOption[aria-checked="true"] {
+  background: #e9f8ff;
+  color: #07131f;
+}
+
+.backgroundOption:focus-visible {
+  outline: 2px solid #9eeeff;
+  outline-offset: 2px;
+}
+
 .control {
   position: absolute;
   z-index: 3;
@@ -177,6 +223,27 @@
     top: 24px;
   }
 
+  .header h1 {
+    font-size: 34px;
+  }
+
+  .backgroundPicker {
+    top: 128px;
+    right: 16px;
+    left: 16px;
+    justify-content: center;
+  }
+
+  .backgroundPickerLabel {
+    display: none;
+  }
+
+  .backgroundOption {
+    flex: 1 1 0;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+
   .control {
     top: 57%;
   }
@@ -191,7 +258,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .option {
+  .option,
+  .backgroundOption {
     transition: none;
   }
 }
