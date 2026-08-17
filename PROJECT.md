@@ -1,88 +1,85 @@
 # Glaze — current project state
 
-Date: 2026-08-13
+Date: 2026-08-17
 
-Product line: `aj/glaze-v1`
+Product line: `aj/glaze-optics-recovery`
 
-Status: V1 release candidate; not published or deployed
+Status: **optical recovery candidate; owner visual acceptance pending**
 
 ## Product target
 
-Glaze is a DialKit-like developer workflow for glass UI on the web: install a small React package, render real semantic controls, tune a compact material in a visual workbench, inspect renderer and fallback truth, and copy a stable configuration into an existing React or Next.js app.
+Glaze is a React and Next.js component system that gives semantic controls
+convincing liquid-glass optics over explicitly owned visual sources. After the
+optical material is accepted, an in-app developer workbench will tune and
+export that same live material.
 
-V1 optimizes an honest CSS material for clarity and reliability. It does not call CSS output refraction and does not capture arbitrary page DOM.
+The product does not promise arbitrary page capture, automatic backdrop
+inference, cross-browser pixel identity, or Apple parity.
 
-## Completed vertical slice
+## Current authorized slice
 
-- `GlazeSurface`: semantic polymorphic material surface.
-- `GlazeSegmentedControl`: real buttons with radio-group semantics, roving focus, click, Arrow Left/Right, Home, End, disabled states, and visible selection.
-- `GlazeDiagnostics`: requested/effective capability, fallback, material, reduced-motion, and forced-colors truth.
-- Named and custom material resolution with stable public values.
-- Explicit ESM/CJS client entry plus a pure server-safe `./material` subpath.
-- Explicit package CSS; no runtime style injection.
-- Five-scene workbench with presets, all material controls, reset, simulations, and React/JSON export.
-- Self-contained React/Vite and Next App Router consumers.
+Only `/optical-kernel` is active product work:
 
-## Evidence state
+- one component-owned Canvas 2D source at a time;
+- one real-size `320 x 64` segmented control;
+- separate stable-track and moving-selection displacement maps;
+- semantic DOM buttons above one transparent WebGL2 output;
+- explicit CSS fallback when optical rendering is unavailable; and
+- full-scale owner review before any extraction or generalization.
 
-- Package lint and TypeScript pass with no warnings.
-- Root package: 2.01 KB brotli / 8 KB budget.
-- Pure material entry: 785 B brotli / 2 KB budget.
-- CSS: approximately 1.7 KB gzip / 6 KB budget.
-- Unit suite: 21 tests across four files.
-- Workbench: 12 development and 12 production checks across Chromium, Firefox, and Playwright WebKit.
-- Consumers: linked and packed-tarball production builds plus browser checks.
-- React compatibility: packed React 18.3.1 consumer build and runtime interaction pass.
-- Next compatibility: Next `16.2.3` App Router default Turbopack build, SSR, hydration, and keyboard pass.
-- Native inspection: shipping macOS Safari and iOS 26.5 Simulator Safari on iPhone 17 Pro.
+The current map contract is `glaze-optical-map-r1`: R/G encode source
+displacement, B encodes thickness, and A encodes coverage. The renderer is
+demand-driven and stops once the source and spring are idle.
 
-Generated evidence lives under `.gstack/evidence/v1/` and is intentionally ignored by Git. Durable results and caveats live in `docs/V1-PROGRESS.md`.
+## Truthful current state
 
-## Architecture decisions that must not drift
+- No Glaze optical material has owner visual acceptance.
+- M1, M1.1, and M2 remain mechanics and architecture evidence only.
+- The CSS-first V1 passed engineering checks but failed the liquid-glass
+  product gate. Draft PR #6 is closed.
+- The rejected M2 visual reset is preserved at `aj/glaze-visual-reset`
+  commit `371a110` and cannot re-enter the product path.
+- The public React API, workbench, publication, deployment, and release work
+  are frozen until the optical gate passes.
 
-1. Public materials express semantic intent, never raw shader uniforms.
-2. `css` is the default and only supported public V1 renderer.
-3. Unsupported capabilities fall back visibly and preserve semantic DOM.
-4. Arbitrary page capture, `html2canvas`, duplicated interactive subtrees, and automatic backdrop inference are outside V1.
-5. Optical experiments remain private and separately named until ownership, semantics, performance, bundle, and visual gates pass.
-6. A passing build is not visual acceptance. Real-scale human review remains a separate gate.
-7. No broad component catalogue until the segmented-control slice stays green.
+The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 
-## Legacy boundaries
+## Retained assets
 
-`packages/core`, `/m1`, `/m2/video`, and historical test routes preserve renderer research. They are not the ordinary React API and must not leak into public examples.
+- semantic React controls and accessibility behavior;
+- explicit fallback and diagnostics patterns;
+- packed React 18, React 19, and Next.js consumer verification;
+- WebGL lifecycle, DPR, context-loss, and source-ownership evidence;
+- the four-source optical evaluation harness; and
+- historical rejected artifacts as non-mergeable evidence.
 
-The legacy playground currently builds with webpack by default because its Turbopack production compile repeatedly stalls. `pnpm --filter playground build:turbopack` preserves that diagnostic path. The fresh Next consumer passes the same Next version's Turbopack build, so the issue is scoped to legacy playground history rather than `@glazelab/react`.
+## Retired product paths
 
-The rejected candidate probe remains recoverable from commit `7459691` and branch `aj/glaze-engine-bakeoff`; it is not executable on the V1 branch.
+- Mode C and `html2canvas` arbitrary-DOM capture;
+- automatic source detection or page-backdrop inference;
+- CSS glassmorphism as the primary product renderer;
+- the rejected M1/M2 materials and visual baselines; and
+- automation, crops, or agent judgment as visual acceptance.
 
-## Release commands
+## Gate order
+
+1. Owner accepts one real-size optical kernel.
+2. The unchanged material proves segmented control, switch, and slider across
+   owned decoration and explicit media.
+3. The serializable public material/API is frozen.
+4. The workbench is connected to the exact runtime material.
+5. Cross-browser, packed-consumer, physical-device, accessibility, and release
+   gates run before merge or publication.
+
+No later gate may begin early.
+
+## Current verification
 
 ```bash
-corepack pnpm install --frozen-lockfile
-corepack pnpm quality:v1
+corepack pnpm test:optical-kernel:unit
+corepack pnpm test:optical-kernel
+corepack pnpm test:optical-kernel:production
+corepack pnpm --filter playground typecheck
+corepack pnpm --filter playground lint
+corepack pnpm --filter playground build
 ```
-
-Focused commands:
-
-```bash
-corepack pnpm build
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm size
-corepack pnpm test:unit
-corepack pnpm test:v1
-corepack pnpm test:v1:production
-corepack pnpm test:consumers
-corepack pnpm test:packed-consumers
-```
-
-## Remaining owner-controlled gates
-
-- Inspect on at least one physical iPhone and one physical iPad.
-- Decide whether the visual material is accepted for alpha publication.
-- Choose npm ownership/name and publish.
-- Choose deployment destination and deploy the workbench.
-- Push, open/approve a pull request, and merge.
-
-None of those actions may be inferred from local release-candidate completion.

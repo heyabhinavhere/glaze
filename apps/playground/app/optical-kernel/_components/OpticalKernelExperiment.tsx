@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "../optical-kernel.module.css";
 import {
   drawOpticalSource,
+  OPTICAL_MAP_CONTRACT,
   OpticalKernelRenderer,
   OPTICAL_KERNEL_BACKGROUNDS,
   OPTICAL_KERNEL_OPTIONS,
@@ -31,6 +32,7 @@ export function OpticalKernelExperiment() {
   const backgroundOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const backgroundRef = useRef<OpticalKernelBackground>(OPTICAL_KERNEL_BACKGROUNDS[0]);
   const backgroundImagesRef = useRef<Partial<Record<OpticalKernelBackgroundId, HTMLImageElement>>>({});
+  const requestSourceRenderRef = useRef<(() => void) | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(INITIAL_SELECTED_INDEX);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [readyBackgrounds, setReadyBackgrounds] = useState<ReadonlySet<OpticalKernelBackgroundId>>(
@@ -53,6 +55,9 @@ export function OpticalKernelExperiment() {
         if (cancelled) return;
         backgroundImagesRef.current[background.id] = image;
         setReadyBackgrounds((current) => new Set(current).add(background.id));
+        if (backgroundRef.current.id === background.id) {
+          requestSourceRenderRef.current?.();
+        }
       };
       image.src = background.src;
       images.push(image);
@@ -73,11 +78,56 @@ export function OpticalKernelExperiment() {
 
     let animationFrame = 0;
     let destroyed = false;
+    let sourceDirty = true;
+    let announcedWebGL = false;
     const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const handleFallback = (reason: string) => {
       if (destroyed) return;
       setFallbackReason(reason);
       setRendererState("fallback");
+    };
+
+    const scheduleFrame = () => {
+      if (destroyed || animationFrame !== 0) return;
+      animationFrame = window.requestAnimationFrame(frame);
+    };
+
+    const requestSourceRender = () => {
+      sourceDirty = true;
+      scheduleFrame();
+    };
+
+    const frame = (time: number) => {
+      animationFrame = 0;
+      if (destroyed) return;
+      const renderer = rendererRef.current;
+      if (!renderer) return;
+
+      if (sourceDirty) {
+        const context = resizeSourceCanvas(source);
+        if (!context) return;
+        const background = backgroundRef.current;
+        drawOpticalSource(
+          source,
+          context,
+          time,
+          reducedMotionQuery.matches,
+          background,
+          backgroundImagesRef.current[background.id],
+        );
+      }
+
+      const result = renderer.render(
+        time,
+        reducedMotionQuery.matches,
+        sourceDirty,
+      );
+      sourceDirty = false;
+      if (result.rendered && !announcedWebGL) {
+        announcedWebGL = true;
+        setRendererState("webgl");
+      }
+      if (result.needsFrame) scheduleFrame();
     };
 
     try {
@@ -87,38 +137,22 @@ export function OpticalKernelExperiment() {
         control,
         selectedIndex: INITIAL_SELECTED_INDEX,
         onFallback: handleFallback,
+        onRequestFrame: scheduleFrame,
       });
       rendererRef.current = renderer;
       window.__glazeOpticalKernel = renderer;
-      let announcedWebGL = false;
-
-      const frame = (time: number) => {
-        if (destroyed) return;
-        const context = resizeSourceCanvas(source);
-        if (context) {
-          const background = backgroundRef.current;
-          drawOpticalSource(
-            source,
-            context,
-            time,
-            reducedMotionQuery.matches,
-            background,
-            backgroundImagesRef.current[background.id],
-          );
-          const rendered = renderer.render(time, reducedMotionQuery.matches);
-          if (rendered && !announcedWebGL) {
-            announcedWebGL = true;
-            setRendererState("webgl");
-          }
-        }
-        animationFrame = window.requestAnimationFrame(frame);
-      };
-      animationFrame = window.requestAnimationFrame(frame);
+      requestSourceRenderRef.current = requestSourceRender;
+      requestSourceRender();
     } catch (error) {
       handleFallback(error instanceof Error ? error.message : "renderer-initialization-failed");
       const context = resizeSourceCanvas(source);
       if (context) drawOpticalSource(source, context, 0, true, backgroundRef.current);
     }
+
+    const resizeObserver = new ResizeObserver(requestSourceRender);
+    resizeObserver.observe(stage);
+    const handleMotionPreference = () => scheduleFrame();
+    reducedMotionQuery.addEventListener("change", handleMotionPreference);
 
     const handlePointerMove = (event: PointerEvent) => {
       rendererRef.current?.setPointer(event.clientX, event.clientY, event.buttons > 0);
@@ -131,11 +165,14 @@ export function OpticalKernelExperiment() {
     return () => {
       destroyed = true;
       window.cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+      reducedMotionQuery.removeEventListener("change", handleMotionPreference);
       stage.removeEventListener("pointermove", handlePointerMove);
       stage.removeEventListener("pointerleave", handlePointerLeave);
       stage.removeEventListener("pointerup", handlePointerLeave);
       rendererRef.current?.destroy();
       rendererRef.current = null;
+      requestSourceRenderRef.current = null;
       delete window.__glazeOpticalKernel;
     };
   }, []);
@@ -152,6 +189,7 @@ export function OpticalKernelExperiment() {
   const selectBackground = (index: number, focus = false) => {
     backgroundRef.current = OPTICAL_KERNEL_BACKGROUNDS[index];
     setBackgroundIndex(index);
+    requestSourceRenderRef.current?.();
     if (focus) backgroundOptionRefs.current[index]?.focus();
   };
 
@@ -197,6 +235,7 @@ export function OpticalKernelExperiment() {
         data-renderer={rendererState}
         data-background={selectedBackground.id}
         data-background-ready={readyBackgrounds.has(selectedBackground.id)}
+        data-optical-map={OPTICAL_MAP_CONTRACT.id}
         data-fallback-reason={rendererState === "fallback" ? fallbackReason : undefined}
         aria-labelledby="optical-kernel-title"
       >
@@ -210,8 +249,8 @@ export function OpticalKernelExperiment() {
 
         <header className={styles.header}>
           <p>Glaze / renderer gate</p>
-          <h1 id="optical-kernel-title">One lens. Real pixels.</h1>
-          <span>Same optical kernel · {selectedBackground.label} source</span>
+          <h1 id="optical-kernel-title">One source. Two surfaces.</h1>
+          <span>Deterministic optical maps · {selectedBackground.label} source</span>
         </header>
 
         <div
@@ -272,7 +311,7 @@ export function OpticalKernelExperiment() {
               ? `${selectedBackground.label} source · refractive output`
               : "Accessible fallback"}
           </p>
-          <p>Switch source · material stays fixed</p>
+          <p>Track + selection · material stays fixed</p>
         </footer>
       </section>
     </main>

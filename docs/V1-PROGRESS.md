@@ -1,5 +1,10 @@
 # Glaze V1 progress ledger
 
+> **Superseded product status — 2026-08-17:** The completed engineering work
+> below is retained as scaffolding and verification evidence. The CSS material
+> failed owner product review, draft PR #6 was closed, and V1 is not cleared
+> for release. Current status: `docs/RECOVERY.md`.
+
 This is the compact checkpoint log for the active Codex goal. A checkpoint is complete only when its evidence is recorded here.
 
 ## 2026-08-13 — Checkpoint 0: research closure

@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   OPTICAL_KERNEL_BACKGROUNDS,
   OPTICAL_KERNEL_CONTRACT,
-  OPTICAL_KERNEL_FRAGMENT_SHADER,
   OPTICAL_KERNEL_OPTIONS,
 } from "../apps/playground/app/optical-kernel/_lib/optical-kernel-renderer";
+import {
+  OPTICAL_COMPOSITE_FRAGMENT_SHADER,
+  OPTICAL_MAP_CONTRACT,
+  OPTICAL_MAP_FRAGMENT_SHADER,
+} from "../apps/playground/app/optical-kernel/_lib/optical-map";
 
 describe("optical kernel contract", () => {
   it("keeps the proof at authored component scale", () => {
@@ -14,7 +18,8 @@ describe("optical kernel contract", () => {
       inset: 4,
       segmentCount: 3,
       maxDpr: 2,
-      renderer: "webgl2-sdf-refraction",
+      renderer: "webgl2-displacement-map",
+      mapId: "glaze-optical-map-r1",
     });
     expect(OPTICAL_KERNEL_OPTIONS).toEqual(["Focus", "Flow", "Form"]);
     expect(OPTICAL_KERNEL_BACKGROUNDS).toEqual([
@@ -25,30 +30,45 @@ describe("optical kernel contract", () => {
     ]);
   });
 
-  it("implements renderer-native optical cues rather than blur finishing", () => {
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("rounded_box_sdf");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("height_gradient");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("displaced_uv");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("fresnel");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("specular");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("opposing");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("interior_splay");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("adaptive_volume");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("active_relief");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("directional_rim");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("elastic_active_distance");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("blur");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("active_edge");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("outer_edge");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("contact_shadow");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("caustic_halo");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("premultiplied_transmission = transmitted * coverage");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("/backgrounds/");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("u_background");
+  it("defines a portable deterministic displacement-map contract", () => {
+    expect(OPTICAL_MAP_CONTRACT).toEqual({
+      id: "glaze-optical-map-r1",
+      channels: {
+        red: "horizontal-displacement",
+        green: "vertical-displacement",
+        blue: "thickness",
+        alpha: "coverage",
+      },
+      maxDisplacementPx: 18,
+      surfaces: ["track", "selection"],
+    });
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).toContain("out_map");
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).toContain("u_surface");
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).toContain("surface_height");
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).toContain("encoded_displacement");
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).not.toContain("smooth_min");
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).not.toContain("lobe");
   });
 
-  it("keeps every pixel outside the material silhouette transparent", () => {
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("if (material_mask <= 0.001)");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("out_color = vec4(0.0)");
+  it("composites separate track and selection maps without a gray wash", () => {
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("u_track_map");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("u_selection_map");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("directional_rim");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("directional_occlusion");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("material * coverage");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).not.toContain("adaptive_volume");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).not.toContain("blur");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).not.toContain("/backgrounds/");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).not.toContain("u_background");
+  });
+
+  it("keeps every pixel outside both optical surfaces transparent", () => {
+    expect(OPTICAL_MAP_FRAGMENT_SHADER).toContain(
+      "out_map = vec4(0.5, 0.5, 0.0, 0.0)",
+    );
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain(
+      "track_map.a <= 0.001 && selection_map.a <= 0.001",
+    );
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("out_color = vec4(0.0)");
   });
 });

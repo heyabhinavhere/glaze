@@ -1,5 +1,11 @@
 # Glaze M2 — Explicit Video Next.js Integration
 
+> **Superseded status — 2026-08-17:** The M2 acceptance below was granted by an
+> agent/orchestrator and was withdrawn after live, full-viewport owner review.
+> This slice proves source ownership, lifecycle, SSR/hydration, semantics, and
+> fallback mechanics only. It is not an accepted visual product. See
+> `docs/RECOVERY.md`.
+
 Date: 2026-08-12
 Starting commit: `d5a96731971a828ebddd26325a1667405d4a06e6`
 Branch: `aj/glaze-m2-explicit-video-nextjs`

@@ -1,72 +1,110 @@
-# Optical Kernel Acceptance Gate
+# Optical kernel acceptance gate
 
-Status: revised after owner visual review on 2026-08-17. Revision 2 passed its mechanical checks but failed visual review because the material body remained weak and its bright double contour read as a drawn stroke rather than liquid glass.
+Date: 2026-08-17
+
+Status: recovery candidate 1; owner visual acceptance pending
 
 ## Purpose
 
-Prove that Glaze can render a small interactive control as a transparent, refractive, responsive lens on the web. This is a renderer gate, not a library API, workbench, documentation, or release gate.
-
-The experiment lives at `/optical-kernel`. It is intentionally one component with a small set of owned-source scenes so that source capture, optical geometry, interaction, and semantic HTML can be evaluated without arbitrary-DOM capture complexity or per-background material tuning.
-
-## Reference-derived requirements
-
-- Refraction/displacement is the material. Blur, tint, borders, shadows, and gradients cannot substitute for visible bending of the source.
-- Optical mass must be legible across the full `320 x 64` body at rest. A viewer must not need to hunt for the curved edge to discover the material.
-- The material may not rely on a continuous bright or dark perimeter. Its body must be legible through interior displacement, adaptive transmission, and directional surface response.
-- Pixels outside the material silhouette remain transparent in the current candidate. External shadows and caustic halos are excluded until a later experiment proves they improve depth without reading as a stroke.
-- The lens is a floating control layer. The content layer remains the visual subject.
-- Interaction moves and energizes the lens with light; the resting state stays quieter.
-- A selected segment is communicated by a lens that travels between options, not by a CSS-filled active pill.
-- Semantic controls remain DOM elements above the rendered material.
-- DialKit-like live parameter tuning is a later workflow layer. It is not part of this renderer gate and cannot make a failed material acceptable.
+Prove that Glaze can render one small semantic control as a clear, refractive,
+responsive lens over explicitly owned pixels. This is a renderer gate, not a
+public API, component catalogue, workbench, documentation-polish, or release
+gate.
 
 ## Fixed experiment
 
-- Four switchable, component-owned Canvas 2D sources: the animated geometric reference plus same-origin architecture, bright-color, and dark high-contrast image fixtures. These provide materially different displacement and visibility probes.
-- Background switching changes only the uploaded source pixels. Lens geometry, shader code, optical constants, selected segment, and renderer instance remain fixed.
-- One shared transparent WebGL2 overlay.
-- One real-size three-option segmented control: `320 x 64 CSS px` on desktop and `min(320px, viewport - 32px)` on compact screens.
-- One coherent outer capsule plus a stronger moving selection deformation. The active region must remain part of the same volume rather than reading as a dark pill stacked on top of glass.
-- Three semantic DOM buttons in a `radiogroup`, with keyboard selection and visible focus.
+- Route: `/optical-kernel`.
+- Control: one three-option `320 x 64` DOM radiogroup.
+- Sources: generated high-frequency reference, architecture, bright color,
+  and dark/high-contrast fixtures.
+- Renderer: one transparent WebGL2 output sampling one owned Canvas 2D source.
+- Material: unchanged across every source and selected state.
+- Geometry: one stable track plus one separate, continuous moving selection
+  lens. No SDF-lobe union or opaque selected pill.
+- Motion: a damped spring may stretch/skew the single selection surface. The
+  renderer stops requesting frames after the spring settles.
 
-## Renderer success path
+## Optical-map contract
 
-- Source pixels are explicitly uploaded to a WebGL texture owned by the component.
-- Lens geometry is generated from a signed-distance field.
-- The fragment shader derives thickness, surface normal, refraction offset, restrained channel separation, directional reflection, opposing-edge occlusion, and adaptive transmitted light.
-- Pixels outside the geometric body are transparent.
-- Partially covered pixels use premultiplied RGB before browser compositing; unpremultiplied color at an antialiased edge is a gate failure because it creates a false bright contour.
-- The glass surface uses no CSS `backdrop-filter`, background fill/gradient, border, or box shadow on the WebGL success path.
-- Pointer position affects lighting. Selection motion changes optical geometry rather than cross-fading a CSS decoration.
+Both the stable track and selection maps are deterministic RGBA textures:
 
-## Fallback contract
+- R: horizontal source displacement;
+- G: vertical source displacement;
+- B: thickness; and
+- A: coverage.
 
-When WebGL2 is unavailable, initialization fails, or the context is lost, semantic controls remain usable and an explicit CSS fallback is shown. The fallback may use a solid/translucent treatment, but it must expose `data-renderer="fallback"` and a readable reason. It is not accepted as optical proof.
+The composite pass samples the same source through both maps and derives
+surface normals from thickness gradients. It uses those normals for visible
+refraction, restrained dispersion, directional highlight, and opposing
+occlusion.
 
-## Pass/fail checks
+The renderer may produce one thin, directional rim where the surface normal
+and light agree. It may not draw a uniform perimeter, double contour, neon
+halo, CSS border, gradient, mask, backdrop filter, or box shadow on the WebGL
+success path. Source detail must remain recognizable; a gray/milky wash is a
+failure.
 
-At both `1280 x 720` and `390 x 844`, without zooming or cropping:
+Partially covered output uses premultiplied RGB. Pixels outside both map
+coverages remain transparent.
 
-1. Background lines and rings visibly change direction or position across the full lens body, with stronger bending at its curved edges.
-2. The material body is immediately legible at `320 x 64` because interior displacement, adaptive volume, opposing-edge occlusion, and directional reflection agree. It must not rely on a continuous drawn outline.
-3. The selected deformation is dimensional but remains optically continuous with the outer capsule; it must not read as a dark or opaque pill stacked on top.
-4. Source detail remains visible through the control. Blur is not the dominant cue.
-5. The lens remains legible over both bright and dark moving source regions without turning milky or opaque.
-6. Clicking or using arrow keys produces visibly elastic geometry: stretch, edge-lobe deformation, and settling must be apparent across at least three motion samples rather than translating a rigid capsule.
-7. Pixels outside the material silhouette remain visually unchanged.
-8. DOM labels stay crisp and authoritative above the renderer during rest and motion.
-9. The control fits the viewport, DOM labels remain readable, and focus is visible.
-10. WebGL failure leaves a usable, truthfully labelled fallback.
-11. There are no uncaught page errors, failed shader compilation, or leaked animation loops after unmount.
-12. Switching among all four sources preserves the WebGL renderer, selected optical mode, frame/upload progression, and fixed material shader.
-13. A source-versus-composite pixel probe passes on detailed, bright, and dark sources: mean interior change is greater than `4`, mean perimeter change is less than `16`, fewer than `20%` of perimeter samples have a channel-mean delta of `28` or more, and mean outside change is less than `0.75`.
+## Semantic and fallback contract
+
+The three buttons remain the only interactive and assistive-technology-visible
+tree. Labels are not copied into source pixels. Arrow keys, Home, End, click,
+focus, and selected state work independently of WebGL.
+
+WebGL2 initialization failure or context loss exposes
+`data-renderer="fallback"`, a readable reason, and a usable semantic control.
+The fallback is legible but makes no optical claim.
+
+## Mechanical vetoes
+
+At `1280 x 720` and `390 x 844`:
+
+1. The control measures `320 x 64`, remains inside the viewport, and keeps
+   crisp DOM labels above the renderer.
+2. All four sources use the same map contract and shader programs.
+3. Track and selection maps render separately; map renders equal two per
+   composite frame.
+4. Static sources stop uploading, and composite/map frame counts stop changing
+   once the spring settles.
+5. Reduced motion snaps selection with zero velocity.
+6. WebGL initialization and context-loss failure preserve semantics and expose
+   explicit reasons.
+7. The success path has no CSS material finish.
+8. Source-versus-composite probes on architecture, color, and dark fixtures
+   require mean interior change greater than `5`, mean perimeter change below
+   `34`, fewer than `55%` of perimeter samples at channel-mean delta `28` or
+   higher, and mean outside change below `0.75`.
+9. There are no uncaught page errors, failed shaders/framebuffers, or leaked
+   animation loops.
+
+These checks may reject mechanics. Passing them does not accept the material.
+
+## Owner visual gate
+
+Primary evidence is a full viewport at 1x plus a same-scale reference. A
+real-size crop and motion frames are supporting evidence only.
+
+The candidate passes only when the owner explicitly accepts all of the
+following:
+
+- refraction and local magnification are obvious at actual size;
+- the material has clear volume without a smoky overlay;
+- source detail survives light, dark, quiet, noisy, and photographic scenes;
+- highlight and opposing occlusion describe one coherent surface;
+- there is no uniform neon or double outline;
+- the active lens remains one body during travel; and
+- the unchanged material works across every source.
+
+“Better”, “improved”, passing tests, or agent approval do not count.
 
 ## Stop rule
 
-Do not design the public package schema, add a parameter panel, generalize arbitrary-DOM capture, publish, merge, or claim renderer readiness until this real-size gate has passed visual inspection. Automated checks establish mechanics only; they do not overrule a visual rejection.
+Do not change the public schema, add source adapters/components, build the
+workbench, publish, deploy, merge, or reopen a release PR before owner visual
+acceptance.
 
-## Sources
-
-- Apple, “Meet Liquid Glass” (WWDC25): dynamic lensing, adaptive lighting and separation, interaction energy, restrained use in the control/navigation layer.
-- Aave, “Building Glass for the Web”: displacement as the core technique; semantic content above the effect; a moving glass selection indicator; shared WebGL renderer for live video.
-- Josh Puckett, DialKit: installable, typed, live parameter tuning and preset/export workflow to consider only after the renderer is accepted.
+This candidate may receive at most two bounded owner-directed revisions. If
+both fail, stop modifying the internal shader and follow the fallback decision
+recorded in `docs/RECOVERY.md`.

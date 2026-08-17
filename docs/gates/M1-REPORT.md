@@ -1,5 +1,10 @@
 # Glaze Milestone 1 — Rendering Feasibility Verdict
 
+> **Superseded status — 2026-08-17:** Every visual-acceptance claim below is
+> historical agent/orchestrator evidence and was withdrawn by later owner
+> review. M1 now proves mechanics only. The current owner-gated status is
+> `docs/RECOVERY.md`; no M1 material is an accepted product reference.
+
 Date: 2026-08-12
 Baseline commit: `2bd4a5ac1fd01358cef885f8a3cf4aabc0f7ef03`
 Checkpoint branch: `aj/glaze-m1-research-spike`

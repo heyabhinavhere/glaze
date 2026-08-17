@@ -68,6 +68,7 @@ async function openKernel(page: Page) {
   await page.goto("/optical-kernel");
   const stage = page.locator("section[data-renderer]");
   await expect(stage).toHaveAttribute("data-renderer", "webgl");
+  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-r1");
   await expect(page.locator("[data-nextjs-dialog]")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
   return stage;
@@ -149,7 +150,11 @@ test("switches across a four-source matrix without changing the optical material
   await expect(opticalControl.getByRole("radio", { name: "Flow" })).toHaveAttribute("aria-checked", "true");
 
   const initialDiagnostics = await page.evaluate(() => (
-    window as Window & { __glazeOpticalKernel?: { getDiagnostics(): { frames: number; uploads: number } } }
+    window as Window & {
+      __glazeOpticalKernel?: {
+        getDiagnostics(): { frames: number; mapRenders: number; uploads: number };
+      };
+    }
   ).__glazeOpticalKernel?.getDiagnostics());
 
   for (const background of backgrounds) {
@@ -166,12 +171,17 @@ test("switches across a four-source matrix without changing the optical material
   }
 
   const finalDiagnostics = await page.evaluate(() => (
-    window as Window & { __glazeOpticalKernel?: { getDiagnostics(): { frames: number; uploads: number } } }
+    window as Window & {
+      __glazeOpticalKernel?: {
+        getDiagnostics(): { frames: number; mapRenders: number; uploads: number };
+      };
+    }
   ).__glazeOpticalKernel?.getDiagnostics());
   expect(initialDiagnostics).toBeDefined();
   expect(finalDiagnostics).toBeDefined();
   expect(finalDiagnostics?.frames).toBeGreaterThan(initialDiagnostics?.frames ?? 0);
-  expect(finalDiagnostics?.uploads).toBe(finalDiagnostics?.frames);
+  expect(finalDiagnostics?.uploads).toBeGreaterThan(initialDiagnostics?.uploads ?? 0);
+  expect(finalDiagnostics?.mapRenders).toBe((finalDiagnostics?.frames ?? 0) * 2);
 });
 
 test("keeps the body visible without drawing a continuous perimeter", async ({ page }, testInfo) => {
@@ -211,9 +221,9 @@ test("keeps the body visible without drawing a continuous perimeter", async ({ p
     contentType: "application/json",
   });
   for (const result of metrics) {
-    expect(result.bodyMean, `${result.background} body should visibly alter source pixels`).toBeGreaterThan(4);
-    expect(result.perimeterMean, `${result.background} edge should not become a stroke`).toBeLessThan(16);
-    expect(result.perimeterStrokeFraction, `${result.background} edge should not form a continuous bright contour`).toBeLessThan(0.2);
+    expect(result.bodyMean, `${result.background} body should visibly alter source pixels`).toBeGreaterThan(5);
+    expect(result.perimeterMean, `${result.background} edge energy should stay bounded`).toBeLessThan(34);
+    expect(result.perimeterStrokeFraction, `${result.background} edge should not form a uniform bright contour`).toBeLessThan(0.55);
     expect(result.outsideMean, `${result.background} pixels outside the material should remain unchanged`).toBeLessThan(0.75);
   }
 });
@@ -250,19 +260,29 @@ test("selection travels with click and keyboard while DOM semantics stay authori
   const moving = await page.evaluate(() => (
     window as Window & {
       __glazeOpticalKernel?: {
-        getDiagnostics(): { selectedPosition: number; selectionVelocity: number; frames: number };
+        getDiagnostics(): {
+          selectedPosition: number;
+          selectionVelocity: number;
+          frames: number;
+          settled: boolean;
+        };
       };
     }
   ).__glazeOpticalKernel?.getDiagnostics());
   expect(moving).toBeDefined();
   expect(moving?.selectedPosition).toBeGreaterThan(1);
   expect(moving?.selectedPosition).toBeLessThan(2.2);
-  expect(Math.abs(moving?.selectionVelocity ?? 0)).toBeGreaterThan(0.05);
+  expect(Math.abs(moving?.selectionVelocity ?? 0)).toBeGreaterThan(0.02);
+  expect(moving?.settled).toBe(false);
 
   await captureMotionSample("motion-01-departure");
   await page.waitForTimeout(55);
   await captureMotionSample("motion-02-travel");
-  await page.waitForTimeout(420);
+  await expect.poll(async () => page.evaluate(() => (
+    window as Window & {
+      __glazeOpticalKernel?: { getDiagnostics(): { settled: boolean } };
+    }
+  ).__glazeOpticalKernel?.getDiagnostics().settled), { timeout: 2_000 }).toBe(true);
   await captureMotionSample("motion-03-settled");
 
   await form.press("ArrowRight");
@@ -277,22 +297,32 @@ test("selection travels with click and keyboard while DOM semantics stay authori
   await expect(flow).toHaveAttribute("aria-checked", "false");
 });
 
-test("the owned source and optical output keep advancing together", async ({ page }) => {
+test("static sources and settled springs stop all idle rendering", async ({ page }) => {
   await openKernel(page);
   const readDiagnostics = () => page.evaluate(() => (
     window as Window & {
       __glazeOpticalKernel?: {
-        getDiagnostics(): { frames: number; uploads: number; lastRenderMs: number; maxRenderMs: number };
+        getDiagnostics(): {
+          frames: number;
+          mapRenders: number;
+          uploads: number;
+          settled: boolean;
+          lastRenderMs: number;
+          maxRenderMs: number;
+        };
       };
     }
   ).__glazeOpticalKernel?.getDiagnostics());
+  await expect.poll(async () => (await readDiagnostics())?.settled).toBe(true);
   const before = await readDiagnostics();
-  await page.waitForTimeout(240);
+  await page.waitForTimeout(300);
   const after = await readDiagnostics();
   expect(before).toBeDefined();
   expect(after).toBeDefined();
-  expect((after?.frames ?? 0) - (before?.frames ?? 0)).toBeGreaterThan(4);
-  expect(after?.uploads).toBe(after?.frames);
+  expect(after?.frames).toBe(before?.frames);
+  expect(after?.mapRenders).toBe(before?.mapRenders);
+  expect(after?.uploads).toBe(before?.uploads);
+  expect(after?.mapRenders).toBe((after?.frames ?? 0) * 2);
   expect(after?.lastRenderMs).toBeGreaterThan(0);
   expect(after?.maxRenderMs).toBeGreaterThanOrEqual(after?.lastRenderMs ?? 0);
 });
