@@ -1,6 +1,6 @@
 # Optical Kernel Acceptance Gate
 
-Status: revised after reference-video review on 2026-08-16. The first implementation passed its mechanical checks but failed owner visual review because its body was too close to the untouched source and its strict outside-pixel rule prohibited grounded optical separation.
+Status: revised after owner visual review on 2026-08-17. Revision 2 passed its mechanical checks but failed visual review because the material body remained weak and its bright double contour read as a drawn stroke rather than liquid glass.
 
 ## Purpose
 
@@ -12,7 +12,8 @@ The experiment lives at `/optical-kernel`. It is intentionally one component wit
 
 - Refraction/displacement is the material. Blur, tint, borders, shadows, and gradients cannot substitute for visible bending of the source.
 - Optical mass must be legible across the full `320 x 64` body at rest. A viewer must not need to hunt for the curved edge to discover the material.
-- The silhouette may produce a narrow renderer-native contact shadow and caustic halo. These are consequences of the same material field, not CSS finish, and must decay to transparent within a bounded region.
+- The material may not rely on a continuous bright or dark perimeter. Its body must be legible through interior displacement, adaptive transmission, and directional surface response.
+- Pixels outside the material silhouette remain transparent in the current candidate. External shadows and caustic halos are excluded until a later experiment proves they improve depth without reading as a stroke.
 - The lens is a floating control layer. The content layer remains the visual subject.
 - Interaction moves and energizes the lens with light; the resting state stays quieter.
 - A selected segment is communicated by a lens that travels between options, not by a CSS-filled active pill.
@@ -32,8 +33,9 @@ The experiment lives at `/optical-kernel`. It is intentionally one component wit
 
 - Source pixels are explicitly uploaded to a WebGL texture owned by the component.
 - Lens geometry is generated from a signed-distance field.
-- The fragment shader derives thickness, surface normal, refraction offset, restrained channel separation, Fresnel rim, directional specular response, opposing-edge occlusion, and transmitted light.
-- Pixels beyond the bounded optical halo are transparent. A narrow renderer-native contact shadow and caustic may extend outside the geometric body.
+- The fragment shader derives thickness, surface normal, refraction offset, restrained channel separation, directional reflection, opposing-edge occlusion, and adaptive transmitted light.
+- Pixels outside the geometric body are transparent.
+- Partially covered pixels use premultiplied RGB before browser compositing; unpremultiplied color at an antialiased edge is a gate failure because it creates a false bright contour.
 - The glass surface uses no CSS `backdrop-filter`, background fill/gradient, border, or box shadow on the WebGL success path.
 - Pointer position affects lighting. Selection motion changes optical geometry rather than cross-fading a CSS decoration.
 
@@ -46,17 +48,18 @@ When WebGL2 is unavailable, initialization fails, or the context is lost, semant
 At both `1280 x 720` and `390 x 844`, without zooming or cropping:
 
 1. Background lines and rings visibly change direction or position across the full lens body, with stronger bending at its curved edges.
-2. The material silhouette is immediately legible at `320 x 64` because full-volume transmission, a coherent bright rim, opposing-edge occlusion, and a narrow contact shadow/caustic agree. It must not rely on a continuous drawn outline.
+2. The material body is immediately legible at `320 x 64` because interior displacement, adaptive volume, opposing-edge occlusion, and directional reflection agree. It must not rely on a continuous drawn outline.
 3. The selected deformation is dimensional but remains optically continuous with the outer capsule; it must not read as a dark or opaque pill stacked on top.
 4. Source detail remains visible through the control. Blur is not the dominant cue.
 5. The lens remains legible over both bright and dark moving source regions without turning milky or opaque.
 6. Clicking or using arrow keys produces visibly elastic geometry: stretch, edge-lobe deformation, and settling must be apparent across at least three motion samples rather than translating a rigid capsule.
-7. Pixels farther than `14 CSS px` from the material silhouette remain visually unchanged.
+7. Pixels outside the material silhouette remain visually unchanged.
 8. DOM labels stay crisp and authoritative above the renderer during rest and motion.
 9. The control fits the viewport, DOM labels remain readable, and focus is visible.
 10. WebGL failure leaves a usable, truthfully labelled fallback.
 11. There are no uncaught page errors, failed shader compilation, or leaked animation loops after unmount.
 12. Switching among all four sources preserves the WebGL renderer, selected optical mode, frame/upload progression, and fixed material shader.
+13. A source-versus-composite pixel probe passes on detailed, bright, and dark sources: mean interior change is greater than `4`, mean perimeter change is less than `16`, fewer than `20%` of perimeter samples have a channel-mean delta of `28` or more, and mean outside change is less than `0.75`.
 
 ## Stop rule
 

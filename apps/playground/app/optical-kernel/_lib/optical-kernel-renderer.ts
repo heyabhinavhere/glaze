@@ -78,8 +78,9 @@ float smooth_min(float a, float b, float radius) {
 float capsule_height(vec2 point, vec2 center, vec2 half_size, float radius) {
   float distance_to_edge = rounded_box_sdf(point, center, half_size, radius);
   float inside = smoothstep(1.25, -1.25, distance_to_edge);
-  float bevel = smoothstep(0.0, min(17.0, radius * 0.62), -distance_to_edge);
-  return inside * mix(0.0, 1.0, pow(bevel, 0.68));
+  float normalized_depth = clamp(-distance_to_edge / max(radius, 1.0), 0.0, 1.0);
+  float spherical_profile = sqrt(max(0.0, 1.0 - pow(1.0 - normalized_depth, 2.0)));
+  return inside * pow(spherical_profile, 1.08);
 }
 
 float elastic_active_distance(
@@ -119,8 +120,9 @@ float material_height(
   float outer_volume = capsule_height(point, outer_center, outer_half, outer_radius) * 0.72;
   float active_distance = elastic_active_distance(point, active_center, active_half, active_radius, velocity, speed, touch_field);
   float active_inside = smoothstep(1.25, -1.25, active_distance);
-  float active_bevel = smoothstep(0.0, min(18.0, active_radius * 0.64), -active_distance);
-  float active_volume = active_inside * mix(0.0, 1.0, pow(active_bevel, 0.64));
+  float active_depth = clamp(-active_distance / max(active_radius, 1.0), 0.0, 1.0);
+  float active_profile = sqrt(max(0.0, 1.0 - pow(1.0 - active_depth, 2.0)));
+  float active_volume = active_inside * pow(active_profile, 1.02);
   return max(outer_volume, active_volume);
 }
 
@@ -172,37 +174,12 @@ void main() {
     speed,
     touch_field
   );
-  float material_distance = smooth_min(outer_distance, active_distance, 4.5);
   float outer_mask = smoothstep(1.1, -1.1, outer_distance);
   float active_mask = smoothstep(1.1, -1.1, active_distance);
-  float material_mask = smoothstep(1.15, -1.15, material_distance);
-
-  float shifted_outer_distance = rounded_box_sdf(point, outer_center + vec2(0.0, 4.5), outer_half + vec2(1.5, 1.0), outer_radius + 1.0);
-  float shifted_active_distance = elastic_active_distance(
-    point,
-    active_center + vec2(velocity * 1.4, 4.0),
-    active_half + vec2(1.2, 0.8),
-    active_radius + 0.8,
-    velocity,
-    speed,
-    touch_field
-  );
-  float contact_distance = smooth_min(shifted_outer_distance, shifted_active_distance, 5.0);
-  float contact_shadow = smoothstep(10.0, -1.0, contact_distance) * (1.0 - material_mask);
-  float outside_distance = max(material_distance, 0.0);
-  float caustic_halo = exp(-pow((outside_distance - 2.4) / 2.2, 2.0)) * (1.0 - material_mask);
-  float lower_side = smoothstep(-0.15, 0.85, (point.y - outer_center.y) / max(outer_half.y, 1.0));
-  float halo_alpha = contact_shadow * mix(0.035, 0.115, lower_side) + caustic_halo * mix(0.018, 0.052, 1.0 - lower_side);
-  halo_alpha *= 1.0 - smoothstep(9.0, 14.0, outside_distance);
-
-  if (material_mask <= 0.001 && halo_alpha <= 0.001) {
-    out_color = vec4(0.0);
-    return;
-  }
+  float material_mask = outer_mask;
 
   if (material_mask <= 0.001) {
-    vec3 halo_color = mix(vec3(0.005, 0.018, 0.032), vec3(0.48, 0.92, 1.0), caustic_halo * 0.34);
-    out_color = vec4(halo_color, halo_alpha);
+    out_color = vec4(0.0);
     return;
   }
 
@@ -217,30 +194,25 @@ void main() {
   vec2 outer_local = (point - outer_center) / max(outer_half, vec2(1.0));
   vec2 active_local = point - active_center;
   vec2 active_local_normalized = active_local / max(active_half, vec2(1.0));
-  float active_edge = smoothstep(-19.0, -1.5, active_distance) * active_mask;
-  float outer_edge = smoothstep(-17.0, -1.5, outer_distance) * outer_mask;
-  float edge_energy = clamp(max(active_edge, outer_edge * 0.72), 0.0, 1.0);
+  float outer_height = capsule_height(point, outer_center, outer_half, outer_radius) * 0.72;
+  float active_relief = smoothstep(0.025, 0.24, height - outer_height);
 
   vec2 lens_normal = normalize(height_gradient + vec2(0.00001));
-  float gradient_strength = clamp(length(height_gradient) * 8.5, 0.0, 1.0);
-  vec2 edge_bend = lens_normal * mix(4.8, 12.8, active_mask) * gradient_strength;
-  vec2 interior_splay = -outer_local * vec2(3.8, 2.5) * height * outer_mask;
-  interior_splay += -active_local_normalized * vec2(4.1, 2.8) * height * active_mask;
+  float gradient_strength = clamp(length(height_gradient) * 7.2, 0.0, 1.0);
+  float silhouette_fade = smoothstep(0.4, 4.6, -outer_distance);
+  float optical_energy = gradient_strength * mix(0.42, 0.72, active_relief) * silhouette_fade;
+  vec2 edge_bend = lens_normal * 7.2 * active_relief * gradient_strength * silhouette_fade;
+  vec2 interior_splay = -outer_local * vec2(7.6, 4.8) * height * outer_mask;
+  interior_splay += -active_local_normalized * vec2(5.8, 3.8) * active_relief;
   interior_splay.x += -velocity * (1.0 - min(abs(active_local_normalized.x), 1.0)) * active_mask * 3.2;
   vec2 touch_bend = touch_distance > 0.5
     ? normalize(touch_delta) * touch_field * 3.4
     : vec2(0.0);
   vec2 displaced_point = point + edge_bend + interior_splay + touch_bend;
   vec2 displaced_uv = vec2(displaced_point.x / u_resolution.x, 1.0 - displaced_point.y / u_resolution.y);
-  vec2 chroma_offset = lens_normal * edge_energy * 1.28 / u_resolution;
-  vec3 source_color = source_sample(displaced_uv, chroma_offset, edge_energy);
-  vec2 scatter_step = vec2(0.85) / u_resolution;
-  vec3 optical_scatter = source_color * 4.0;
-  optical_scatter += texture(u_source, clamp(displaced_uv + vec2(scatter_step.x, 0.0), vec2(0.002), vec2(0.998))).rgb;
-  optical_scatter += texture(u_source, clamp(displaced_uv - vec2(scatter_step.x, 0.0), vec2(0.002), vec2(0.998))).rgb;
-  optical_scatter += texture(u_source, clamp(displaced_uv + vec2(0.0, scatter_step.y), vec2(0.002), vec2(0.998))).rgb;
-  optical_scatter += texture(u_source, clamp(displaced_uv - vec2(0.0, scatter_step.y), vec2(0.002), vec2(0.998))).rgb;
-  source_color = mix(source_color, optical_scatter * 0.125, height * 0.34);
+  float chroma_energy = optical_energy * active_relief;
+  vec2 chroma_offset = lens_normal * chroma_energy * 0.28 / u_resolution;
+  vec3 source_color = source_sample(displaced_uv, chroma_offset, chroma_energy);
   float source_luma = luminance(source_color);
 
   vec3 surface_normal = normalize(vec3(-height_gradient * 8.2, 1.0));
@@ -248,27 +220,34 @@ void main() {
   vec3 light_direction = normalize(vec3(pointer_direction, 0.72));
   vec3 view_direction = vec3(0.0, 0.0, 1.0);
   vec3 half_vector = normalize(light_direction + view_direction);
-  float fresnel = pow(1.0 - clamp(surface_normal.z, 0.0, 1.0), 2.2);
-  float specular = pow(max(dot(surface_normal, half_vector), 0.0), mix(36.0, 24.0, u_energy));
+  float fresnel = pow(1.0 - clamp(surface_normal.z, 0.0, 1.0), 2.6);
+  float specular = pow(max(dot(surface_normal, half_vector), 0.0), mix(42.0, 30.0, u_energy));
   float light_facing = max(dot(surface_normal.xy, light_direction.xy), 0.0);
   float opposing = max(-dot(surface_normal.xy, light_direction.xy), 0.0);
   float traveling_light = 0.5 + 0.5 * sin(u_time * 0.0018 + active_center.x * 0.012);
 
-  float rim_direction = mix(0.2, 1.0, smoothstep(-0.3, 0.72, light_facing - opposing));
-  float upper_body = 1.0 - smoothstep(-0.72, 0.48, outer_local.y);
-  float lower_body = smoothstep(0.12, 0.92, outer_local.y);
-  float adaptive_dim = mix(0.008, 0.026, source_luma) * mix(0.7, 1.0, active_mask);
-  vec3 optical_lift = vec3(0.09, 0.18, 0.205) * height;
-  vec3 transmitted = 1.0 - (1.0 - source_color) * (1.0 - optical_lift);
-  transmitted *= 1.0 - adaptive_dim;
-  transmitted += vec3(0.68, 0.91, 1.0) * upper_body * height * 0.018;
-  transmitted += vec3(0.92, 0.99, 1.0) * edge_energy * (fresnel * 0.24 * rim_direction + specular * 0.48 + light_facing * 0.045);
-  transmitted += vec3(0.58, 0.9, 1.0) * touch_field * (0.038 + traveling_light * 0.022);
-  transmitted *= 1.0 - opposing * edge_energy * mix(0.075, 0.16, source_luma);
-  transmitted *= 1.0 - lower_body * edge_energy * 0.045;
+  vec3 brightened = 1.0 - (1.0 - source_color) * (1.0 - vec3(0.36, 0.46, 0.5));
+  vec3 shaded = source_color * vec3(0.6, 0.68, 0.76);
+  float bright_source = smoothstep(0.36, 0.68, source_luma);
+  vec3 adaptive_volume = mix(brightened, shaded, bright_source);
+  adaptive_volume = mix(adaptive_volume, vec3(luminance(adaptive_volume)), 0.1);
+  float body_strength = height * mix(0.5, 0.82, active_relief) * mix(1.0, 1.28, bright_source);
+  body_strength = min(body_strength, 0.92);
+  vec3 transmitted = mix(source_color, adaptive_volume, body_strength);
 
-  float coverage = clamp(material_mask * (0.965 + edge_energy * 0.035), 0.0, 1.0);
-  out_color = vec4(transmitted, coverage);
+  float directional_rim = optical_energy * pow(light_facing, 1.35);
+  float directional_specular = optical_energy * specular;
+  float upper_reflection = optical_energy * pow(max(-surface_normal.y * 0.9 - surface_normal.x * 0.24, 0.0), 1.35);
+  float lower_absorption = optical_energy * pow(max(surface_normal.y, 0.0), 1.2);
+  transmitted += vec3(0.78, 0.94, 1.0) * (upper_reflection * 0.11 + directional_rim * fresnel * 0.045 + directional_specular * 0.085);
+  transmitted += vec3(0.72, 0.9, 0.96) * active_relief * (0.022 + upper_reflection * 0.055);
+  transmitted += vec3(0.58, 0.9, 1.0) * touch_field * (0.038 + traveling_light * 0.022);
+  transmitted *= 1.0 - opposing * optical_energy * mix(0.055, 0.11, source_luma);
+  transmitted *= 1.0 - lower_absorption * 0.075;
+
+  float coverage = clamp(material_mask * 0.99, 0.0, 1.0);
+  vec3 premultiplied_transmission = transmitted * coverage;
+  out_color = vec4(premultiplied_transmission, coverage);
 }`;
 
 const QUAD = new Float32Array([

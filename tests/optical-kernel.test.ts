@@ -33,17 +33,22 @@ describe("optical kernel contract", () => {
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("specular");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("opposing");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("interior_splay");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("optical_scatter");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("contact_shadow");
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("caustic_halo");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("adaptive_volume");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("active_relief");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("directional_rim");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("elastic_active_distance");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("blur");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("active_edge");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("outer_edge");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("contact_shadow");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("caustic_halo");
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("premultiplied_transmission = transmitted * coverage");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("/backgrounds/");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).not.toContain("u_background");
   });
 
-  it("bounds renderer-native separation and leaves distant pixels transparent", () => {
-    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("if (material_mask <= 0.001 && halo_alpha <= 0.001)");
+  it("keeps every pixel outside the material silhouette transparent", () => {
+    expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("if (material_mask <= 0.001)");
     expect(OPTICAL_KERNEL_FRAGMENT_SHADER).toContain("out_color = vec4(0.0)");
   });
 });
