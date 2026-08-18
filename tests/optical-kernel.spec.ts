@@ -4,6 +4,9 @@ import { PNG } from "pngjs";
 interface OpticalPixelMetrics {
   readonly background: string;
   readonly bodyMean: number;
+  readonly trackBodyMean: number;
+  readonly selectionBodyMean: number;
+  readonly selectionToTrackRatio: number;
   readonly perimeterMean: number;
   readonly perimeterStrokeFraction: number;
   readonly outsideMean: number;
@@ -27,6 +30,8 @@ function measureOpticalPixels(
   const composite = PNG.sync.read(compositeBuffer);
   const source = PNG.sync.read(sourceBuffer);
   const body: number[] = [];
+  const trackBody: number[] = [];
+  const selectionBody: number[] = [];
   const perimeter: number[] = [];
   const outside: number[] = [];
   const scaleX = composite.width / (controlWidth + padding * 2);
@@ -46,7 +51,20 @@ function measureOpticalPixels(
         controlWidth,
         controlHeight,
       );
-      if (distance < -8) body.push(delta);
+      const segmentWidth = (controlWidth - 8) / 3;
+      const selectionWidth = segmentWidth - 3;
+      const selectionHeight = controlHeight - 8;
+      const selectionDistance = capsuleDistance(
+        x / scaleX - padding - (controlWidth - selectionWidth) * 0.5,
+        y / scaleY - padding - (controlHeight - selectionHeight) * 0.5,
+        selectionWidth,
+        selectionHeight,
+      );
+      if (distance < -8) {
+        body.push(delta);
+        if (selectionDistance < -6) selectionBody.push(delta);
+        else if (selectionDistance > 4) trackBody.push(delta);
+      }
       else if (Math.abs(distance) <= 1.5) perimeter.push(delta);
       else if (distance >= 5) outside.push(delta);
     }
@@ -56,6 +74,9 @@ function measureOpticalPixels(
   return {
     background,
     bodyMean: mean(body),
+    trackBodyMean: mean(trackBody),
+    selectionBodyMean: mean(selectionBody),
+    selectionToTrackRatio: mean(selectionBody) / Math.max(mean(trackBody), 0.001),
     perimeterMean: mean(perimeter),
     perimeterStrokeFraction: perimeter.filter((value) => value >= 28).length / perimeter.length,
     outsideMean: mean(outside),
@@ -68,7 +89,7 @@ async function openKernel(page: Page) {
   await page.goto("/optical-kernel");
   const stage = page.locator("section[data-renderer]");
   await expect(stage).toHaveAttribute("data-renderer", "webgl");
-  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-r1");
+  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-r2");
   await expect(page.locator("[data-nextjs-dialog]")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
   return stage;
@@ -197,7 +218,7 @@ test("keeps the body visible without drawing a continuous perimeter", async ({ p
     for (const button of buttons) button.style.visibility = "hidden";
   });
 
-  for (const background of ["Architecture", "Color", "Dark"] as const) {
+  for (const background of ["Reference", "Architecture", "Color", "Dark"] as const) {
     await sourcePicker.getByRole("radio", { name: background }).click();
     await expect(stage).toHaveAttribute("data-background-ready", "true");
     await page.waitForTimeout(80);
@@ -222,6 +243,8 @@ test("keeps the body visible without drawing a continuous perimeter", async ({ p
   });
   for (const result of metrics) {
     expect(result.bodyMean, `${result.background} body should visibly alter source pixels`).toBeGreaterThan(5);
+    expect(result.selectionBodyMean, `${result.background} selected lens should remain visible at actual size`).toBeGreaterThan(12);
+    expect(result.selectionToTrackRatio, `${result.background} selected lens should read as thicker than the track`).toBeGreaterThan(1.5);
     expect(result.perimeterMean, `${result.background} edge energy should stay bounded`).toBeLessThan(34);
     expect(result.perimeterStrokeFraction, `${result.background} edge should not form a uniform bright contour`).toBeLessThan(0.55);
     expect(result.outsideMean, `${result.background} pixels outside the material should remain unchanged`).toBeLessThan(0.75);

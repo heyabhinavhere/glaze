@@ -1,8 +1,8 @@
 # Optical kernel acceptance gate
 
-Date: 2026-08-17
+Date: 2026-08-18
 
-Status: recovery candidate 1; owner visual acceptance pending
+Status: recovery candidate 1, revision 1; owner visual acceptance pending
 
 ## Purpose
 
@@ -72,10 +72,11 @@ At `1280 x 720` and `390 x 844`:
 6. WebGL initialization and context-loss failure preserve semantics and expose
    explicit reasons.
 7. The success path has no CSS material finish.
-8. Source-versus-composite probes on architecture, color, and dark fixtures
-   require mean interior change greater than `5`, mean perimeter change below
-   `34`, fewer than `55%` of perimeter samples at channel-mean delta `28` or
-   higher, and mean outside change below `0.75`.
+8. Source-versus-composite probes on all four fixtures require mean interior
+   change greater than `5`, selected-lens change greater than `12`, and a
+   selected-lens-to-track ratio greater than `1.5`. Mean perimeter change must
+   remain below `34`, fewer than `55%` of perimeter samples may reach
+   channel-mean delta `28`, and mean outside change must remain below `0.75`.
 9. There are no uncaught page errors, failed shaders/framebuffers, or leaked
    animation loops.
 
@@ -105,6 +106,7 @@ Do not change the public schema, add source adapters/components, build the
 workbench, publish, deploy, merge, or reopen a release PR before owner visual
 acceptance.
 
-This candidate may receive at most two bounded owner-directed revisions. If
-both fail, stop modifying the internal shader and follow the fallback decision
-recorded in `docs/RECOVERY.md`.
+This candidate has used one of at most two bounded owner-directed revisions.
+If revision 1 fails, one final diagnosed revision remains. If that also fails,
+stop modifying the internal shader and follow the fallback decision recorded
+in `docs/RECOVERY.md`.
