@@ -3,6 +3,7 @@ import { PNG } from "pngjs";
 
 interface OpticalPixelMetrics {
   readonly background: string;
+  readonly selectedIndex: number;
   readonly bodyMean: number;
   readonly trackBodyMean: number;
   readonly selectionBodyMean: number;
@@ -26,6 +27,7 @@ function measureOpticalPixels(
   padding: number,
   controlWidth: number,
   controlHeight: number,
+  selectedIndex: number,
 ): OpticalPixelMetrics {
   const composite = PNG.sync.read(compositeBuffer);
   const source = PNG.sync.read(sourceBuffer);
@@ -54,8 +56,9 @@ function measureOpticalPixels(
       const segmentWidth = (controlWidth - 8) / 3;
       const selectionWidth = segmentWidth - 3;
       const selectionHeight = controlHeight - 8;
+      const selectionLeft = 4 + segmentWidth * selectedIndex + 1.5;
       const selectionDistance = capsuleDistance(
-        x / scaleX - padding - (controlWidth - selectionWidth) * 0.5,
+        x / scaleX - padding - selectionLeft,
         y / scaleY - padding - (controlHeight - selectionHeight) * 0.5,
         selectionWidth,
         selectionHeight,
@@ -73,6 +76,7 @@ function measureOpticalPixels(
   const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
   return {
     background,
+    selectedIndex,
     bodyMean: mean(body),
     trackBodyMean: mean(trackBody),
     selectionBodyMean: mean(selectionBody),
@@ -89,7 +93,7 @@ async function openKernel(page: Page) {
   await page.goto("/optical-kernel");
   const stage = page.locator("section[data-renderer]");
   await expect(stage).toHaveAttribute("data-renderer", "webgl");
-  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-r2");
+  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-r3");
   await expect(page.locator("[data-nextjs-dialog]")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
   return stage;
@@ -215,26 +219,41 @@ test("keeps the body visible without drawing a continuous perimeter", async ({ p
   const metrics: OpticalPixelMetrics[] = [];
 
   await opticalControl.getByRole("radio").evaluateAll((buttons) => {
-    for (const button of buttons) button.style.visibility = "hidden";
+    for (const button of buttons) {
+      button.style.color = "transparent";
+      button.style.textShadow = "none";
+    }
   });
 
   for (const background of ["Reference", "Architecture", "Color", "Dark"] as const) {
     await sourcePicker.getByRole("radio", { name: background }).click();
     await expect(stage).toHaveAttribute("data-background-ready", "true");
-    await page.waitForTimeout(80);
-    const bounds = await opticalControl.boundingBox();
-    if (!bounds) throw new Error("missing-optical-control-bounds");
-    const clip = {
-      x: bounds.x - padding,
-      y: bounds.y - padding,
-      width: bounds.width + padding * 2,
-      height: bounds.height + padding * 2,
-    };
-    const composite = await page.screenshot({ animations: "disabled", clip });
-    await output.evaluate((canvas) => { canvas.style.visibility = "hidden"; });
-    const source = await page.screenshot({ animations: "disabled", clip });
-    await output.evaluate((canvas) => { canvas.style.visibility = "visible"; });
-    metrics.push(measureOpticalPixels(background.toLowerCase(), composite, source, padding, bounds.width, bounds.height));
+    for (let selectedIndex = 0; selectedIndex < 3; selectedIndex += 1) {
+      await opticalControl.getByRole("radio").nth(selectedIndex).click();
+      await expect(opticalControl).toHaveAttribute("data-selected-index", String(selectedIndex));
+      await page.waitForTimeout(30);
+      const bounds = await opticalControl.boundingBox();
+      if (!bounds) throw new Error("missing-optical-control-bounds");
+      const clip = {
+        x: bounds.x - padding,
+        y: bounds.y - padding,
+        width: bounds.width + padding * 2,
+        height: bounds.height + padding * 2,
+      };
+      const composite = await page.screenshot({ animations: "disabled", clip });
+      await output.evaluate((canvas) => { canvas.style.visibility = "hidden"; });
+      const source = await page.screenshot({ animations: "disabled", clip });
+      await output.evaluate((canvas) => { canvas.style.visibility = "visible"; });
+      metrics.push(measureOpticalPixels(
+        background.toLowerCase(),
+        composite,
+        source,
+        padding,
+        bounds.width,
+        bounds.height,
+        selectedIndex,
+      ));
+    }
   }
 
   await testInfo.attach("optical-pixel-metrics", {
@@ -243,8 +262,8 @@ test("keeps the body visible without drawing a continuous perimeter", async ({ p
   });
   for (const result of metrics) {
     expect(result.bodyMean, `${result.background} body should visibly alter source pixels`).toBeGreaterThan(5);
-    expect(result.selectionBodyMean, `${result.background} selected lens should remain visible at actual size`).toBeGreaterThan(12);
-    expect(result.selectionToTrackRatio, `${result.background} selected lens should read as thicker than the track`).toBeGreaterThan(1.5);
+    expect(result.selectionBodyMean, `${result.background} segment ${result.selectedIndex} selected lens should remain visible at actual size`).toBeGreaterThan(28);
+    expect(result.selectionToTrackRatio, `${result.background} segment ${result.selectedIndex} selected lens should read as thicker than the track`).toBeGreaterThan(1.8);
     expect(result.perimeterMean, `${result.background} edge energy should stay bounded`).toBeLessThan(34);
     expect(result.perimeterStrokeFraction, `${result.background} edge should not form a uniform bright contour`).toBeLessThan(0.55);
     expect(result.outsideMean, `${result.background} pixels outside the material should remain unchanged`).toBeLessThan(0.75);

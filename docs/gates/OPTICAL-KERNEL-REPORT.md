@@ -1,16 +1,16 @@
 # Optical kernel recovery report
 
-Date: 2026-08-18
+Date: 2026-08-19
 
 Branch: `aj/glaze-optics-recovery`
 
 Route: `/optical-kernel`
 
-Map contract: `glaze-optical-map-r2`
+Map contract: `glaze-optical-map-r3`
 
 ## Verdict
 
-**RECOVERY CANDIDATE 1, REVISION 1. MECHANICS PASS. OWNER VISUAL ACCEPTANCE PENDING.**
+**RECOVERY CANDIDATE 1, REVISION 2. MECHANICS PASS. OWNER VISUAL ACCEPTANCE PENDING.**
 
 Product, component extraction, public API, workbench, merge, deployment, and
 release remain blocked.
@@ -19,6 +19,22 @@ This verdict does not reuse the withdrawn M1/M2 acceptance. Passing automation
 is recorded only as mechanical evidence.
 
 ## What changed
+
+### Revision 2 final visibility correction
+
+- Recorded the owner's rejection of revision 1: despite improved metrics, the
+  lens remained almost invisible at normal viewing size.
+- Confirmed the runtime remained healthy and diagnosed the remaining problem:
+  body visibility still depended on source detail and edge lighting.
+- Increased thickness-driven source displacement while preserving one
+  continuous selection shape.
+- Added wavelength-biased absorption and broad environment transmission across
+  the thickness field, making the lens visible over quiet and black pixels
+  without adding a CSS fill, border, blur, or gray wash.
+- Expanded pixel vetoes from one selected position to all three positions over
+  every scene. Across Chromium, Firefox, and WebKit, selection-body deltas now
+  range from `31.2` to `64.3` with selection-to-track ratios from `2.6x` to
+  `7.6x`; outer-perimeter bright fractions remain at or below `28%`.
 
 ### Revision 1 visibility correction
 
@@ -86,7 +102,7 @@ Generated evidence is ignored by Git and lives under
 - full 1280×720 source-matrix captures for each browser;
 - compact 390×844 captures;
 - rest, departure, travel, and settled motion samples; and
-- `review/reference-vs-candidate-real-size-r2.png`, with the supplied reference
+- `review/reference-vs-candidate-real-size-r3.png`, with the supplied reference
   and candidate control shown side by side at the same scale.
 
 The reference remains user-provided external evidence and is not copied into
@@ -104,7 +120,7 @@ the distributable package.
 
 ## Next decision
 
-The only next product decision is owner review of the live/full-scale revision.
-If rejected, record the specific visual failure and use the one remaining
-bounded correction. Do not begin component extraction, workbench work, or
-another renderer direction.
+The only next product decision is owner review of the live/full-scale final
+revision. If rejected, stop modifying this shader and move to the math-only
+transplant decision in `docs/RECOVERY.md`. Do not begin component extraction,
+workbench work, or another renderer direction.

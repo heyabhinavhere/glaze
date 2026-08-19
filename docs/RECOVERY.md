@@ -1,12 +1,12 @@
 # Glaze recovery ledger
 
-Date: 2026-08-18
+Date: 2026-08-19
 
 Active branch: `aj/glaze-optics-recovery`
 
-Active gate: optical kernel candidate 1, revision 1
+Active gate: optical kernel candidate 1, revision 2 (final shader revision)
 
-Owner visual decision: **REVISION 1 PENDING**
+Owner visual decision: **FINAL REVISION PENDING**
 
 ## Product promise
 
@@ -35,7 +35,13 @@ runtime and renderer were healthy. Pixel and shader inspection showed that
 the track and selection used nearly identical transmission while highlight
 and occlusion energy were restricted to a narrow edge.
 
-`glaze-optical-map-r2` is bounded revision 1. It renders one `320 x 64`
+The owner rejected `glaze-optical-map-r2` on 2026-08-19 because it was still
+almost invisible at real size. Revision 1 improved source-pixel deltas but
+still depended on background detail and a directional edge to communicate
+the selected body. That numeric improvement did not satisfy the visual gate.
+
+`glaze-optical-map-r3` is bounded revision 2, the final internal shader
+revision. It renders one `320 x 64`
 segmented control from one owned
 Canvas 2D source. It generates two deterministic GPU maps:
 
@@ -52,11 +58,12 @@ trailing SDF lobes, adaptive gray volume wash, scene-specific values, and
 continuous render loop. A directional renderer-native rim is permitted; a
 uniform border, double contour, CSS glow, and neon halo are not.
 
-Revision 1 keeps one material and makes the geometry legible through optical
-signals: the stable track is thinner, the selected lens is thicker, source
-displacement increases with that thickness, normals drive a broader
-directional Fresnel response, and colored absorption replaces gray opacity.
-The values are unchanged across all four scenes.
+Revision 2 keeps one material and makes the body independently legible on
+quiet pixels: the stable track remains thinner, the selected lens is thicker,
+source displacement increases with thickness, normals drive directional
+Fresnel and opposing occlusion, and cyan-biased absorption plus environment
+transmission span the body instead of concentrating visibility at the edge.
+The values are unchanged across all four scenes and all three selected states.
 
 ## Gate authority
 
@@ -82,9 +89,8 @@ Until the owner accepts the optical kernel, do not:
 
 ## Stop rule
 
-Candidate 1 has used one of at most two bounded owner-directed revisions. If
-revision 1 fails, one final diagnosed revision remains. If that also fails,
-stop changing this shader. The only remaining experiment is a
+Candidate 1 has used both bounded owner-directed revisions. If revision 2
+fails, stop changing this shader. The only remaining experiment is a
 license-verified, math-only displacement transplant behind Glaze's semantic
 and lifecycle layer. If that also fails owner review, record a product
 `NO-GO`; do not retreat to decorative CSS or widen the capture problem.

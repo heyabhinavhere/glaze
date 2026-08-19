@@ -1,12 +1,12 @@
 export const OPTICAL_MAP_CONTRACT = Object.freeze({
-  id: "glaze-optical-map-r2",
+  id: "glaze-optical-map-r3",
   channels: Object.freeze({
     red: "horizontal-displacement",
     green: "vertical-displacement",
     blue: "thickness",
     alpha: "coverage",
   }),
-  maxDisplacementPx: 24,
+  maxDisplacementPx: 28,
   surfaces: Object.freeze(["track", "selection"] as const),
 });
 
@@ -32,7 +32,7 @@ uniform float u_selection_velocity;
 uniform float u_energy;
 uniform int u_surface;
 
-const float MAX_DISPLACEMENT = ${24}.0;
+const float MAX_DISPLACEMENT = ${28}.0;
 
 float rounded_box_sdf(vec2 point, vec2 center, vec2 half_size, float radius) {
   vec2 q = abs(point - center) - half_size + radius;
@@ -84,7 +84,7 @@ float surface_height(vec2 point) {
   float normalized_depth = clamp(-distance_to_edge / max(radius, 1.0), 0.0, 1.0);
   float spherical = sqrt(max(0.0, 1.0 - pow(1.0 - normalized_depth, 2.0)));
   float exponent = u_surface == 0 ? 0.92 : 0.82;
-  float thickness_scale = u_surface == 0 ? 0.48 : 1.0;
+  float thickness_scale = u_surface == 0 ? 0.54 : 1.0;
   return coverage * pow(spherical, exponent) * thickness_scale;
 }
 
@@ -123,8 +123,8 @@ void main() {
   float slope = clamp(gradient_length * 6.5, 0.0, 1.0);
 
   vec2 local = shaped_point - center;
-  vec2 magnification = u_surface == 0 ? vec2(0.045, 0.085) : vec2(0.140, 0.235);
-  float edge_strength = u_surface == 0 ? 2.6 : 8.0;
+  vec2 magnification = u_surface == 0 ? vec2(0.050, 0.095) : vec2(0.180, 0.290);
+  float edge_strength = u_surface == 0 ? 2.8 : 9.5;
   vec2 displacement = -local * magnification * thickness;
   displacement += outward * edge_strength * slope;
 
@@ -155,7 +155,7 @@ uniform vec2 u_resolution;
 uniform vec2 u_light_direction;
 uniform float u_energy;
 
-const float MAX_DISPLACEMENT = ${24}.0;
+const float MAX_DISPLACEMENT = ${28}.0;
 
 vec2 decode_displacement(vec4 optical_map) {
   return (optical_map.rg - 0.5) * 2.0 * MAX_DISPLACEMENT;
@@ -191,7 +191,7 @@ vec3 surface_normal(sampler2D optical_map, vec2 uv) {
   float down = texture(optical_map, uv - vec2(0.0, texel.y)).b;
   float up = texture(optical_map, uv + vec2(0.0, texel.y)).b;
   vec2 gradient = vec2(right - left, up - down) * 0.5;
-  return normalize(vec3(-gradient * 18.0, 1.0));
+  return normalize(vec3(-gradient * 20.0, 1.0));
 }
 
 vec3 shade_surface(
@@ -214,27 +214,34 @@ vec3 shade_surface(
   ) * mix(0.28, 0.72, edge_energy);
 
   vec3 transmitted = source_color;
+  float volume = pow(clamp(map_sample.b, 0.0, 1.0), 0.86);
+  float light_facing = clamp(
+    0.5 + dot(normal.xy, light) * 0.5,
+    0.0,
+    1.0
+  );
   vec3 absorption = mix(
-    vec3(0.025, 0.014, 0.009),
-    vec3(0.160, 0.075, 0.035),
+    vec3(0.060, 0.030, 0.015),
+    vec3(0.420, 0.200, 0.080),
     active_strength
   );
-  transmitted *= exp(-absorption * map_sample.b);
+  transmitted *= exp(-absorption * volume);
   transmitted = mix(
     transmitted,
-    vec3(0.56, 0.84, 0.94),
-    map_sample.b * mix(0.055, 0.14, active_strength)
+    vec3(0.48, 0.82, 0.95),
+    volume * mix(0.080, 0.26, active_strength)
   );
-  transmitted += vec3(0.62, 0.86, 0.94)
-    * map_sample.b
-    * mix(0.012, 0.030, active_strength);
-  transmitted *= 1.0 - directional_occlusion * mix(0.10, 0.24, active_strength);
+  transmitted += vec3(0.40, 0.72, 0.92)
+    * volume
+    * mix(0.022, 0.095, active_strength)
+    * mix(0.78, 1.0, light_facing);
+  transmitted *= 1.0 - directional_occlusion * mix(0.12, 0.30, active_strength);
   transmitted += vec3(0.88, 0.97, 1.0)
     * directional_rim
-    * mix(0.20, 0.42, active_strength);
+    * mix(0.22, 0.48, active_strength);
   transmitted += vec3(1.0, 0.985, 0.95)
     * specular
-    * mix(0.060, 0.14, active_strength);
+    * mix(0.065, 0.15, active_strength);
   return transmitted;
 }
 
@@ -251,7 +258,7 @@ void main() {
     v_uv,
     track_displacement,
     0.06 * track_map.b,
-    0.35
+    0.30
   );
   vec3 track_color = shade_surface(u_track_map, track_map, track_source, 0.0);
 
@@ -259,8 +266,8 @@ void main() {
   vec3 selection_source = source_sample(
     v_uv,
     selection_displacement,
-    (0.28 + u_energy * 0.08) * selection_map.b,
-    0.55
+    (0.34 + u_energy * 0.10) * selection_map.b,
+    0.40
   );
   vec3 selection_color = shade_surface(
     u_selection_map,

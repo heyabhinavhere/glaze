@@ -19,7 +19,7 @@ describe("optical kernel contract", () => {
       segmentCount: 3,
       maxDpr: 2,
       renderer: "webgl2-displacement-map",
-      mapId: "glaze-optical-map-r2",
+      mapId: "glaze-optical-map-r3",
     });
     expect(OPTICAL_KERNEL_OPTIONS).toEqual(["Focus", "Flow", "Form"]);
     expect(OPTICAL_KERNEL_BACKGROUNDS).toEqual([
@@ -32,14 +32,14 @@ describe("optical kernel contract", () => {
 
   it("defines a portable deterministic displacement-map contract", () => {
     expect(OPTICAL_MAP_CONTRACT).toEqual({
-      id: "glaze-optical-map-r2",
+      id: "glaze-optical-map-r3",
       channels: {
         red: "horizontal-displacement",
         green: "vertical-displacement",
         blue: "thickness",
         alpha: "coverage",
       },
-      maxDisplacementPx: 24,
+      maxDisplacementPx: 28,
       surfaces: ["track", "selection"],
     });
     expect(OPTICAL_MAP_FRAGMENT_SHADER).toContain("out_map");
@@ -57,6 +57,7 @@ describe("optical kernel contract", () => {
     expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("directional_rim");
     expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("directional_occlusion");
     expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("absorption");
+    expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("volume");
     expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).toContain("material * coverage");
     expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).not.toContain("adaptive_volume");
     expect(OPTICAL_COMPOSITE_FRAGMENT_SHADER).not.toContain("blur");
