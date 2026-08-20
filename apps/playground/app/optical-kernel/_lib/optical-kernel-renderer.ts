@@ -52,6 +52,7 @@ export interface OpticalKernelFrameResult {
 interface OpticalKernelRendererOptions {
   readonly canvas: HTMLCanvasElement;
   readonly source: HTMLCanvasElement;
+  readonly ownedDecoration: HTMLCanvasElement;
   readonly control: HTMLElement;
   readonly selectedIndex: number;
   readonly onFallback: (reason: string) => void;
@@ -129,11 +130,13 @@ function createTexture(gl: WebGL2RenderingContext): WebGLTexture {
 export class OpticalKernelRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly source: HTMLCanvasElement;
+  private readonly ownedDecoration: HTMLCanvasElement;
   private readonly control: HTMLElement;
   private readonly gl: WebGL2RenderingContext;
   private readonly mapProgram: WebGLProgram;
   private readonly compositeProgram: WebGLProgram;
   private readonly sourceTexture: WebGLTexture;
+  private readonly ownedDecorationTexture: WebGLTexture;
   private readonly trackMapTexture: WebGLTexture;
   private readonly selectionMapTexture: WebGLTexture;
   private readonly mapFramebuffer: WebGLFramebuffer;
@@ -162,6 +165,7 @@ export class OpticalKernelRenderer {
   constructor(options: OpticalKernelRendererOptions) {
     this.canvas = options.canvas;
     this.source = options.source;
+    this.ownedDecoration = options.ownedDecoration;
     this.control = options.control;
     this.targetPosition = options.selectedIndex;
     this.selectedPosition = options.selectedIndex;
@@ -180,6 +184,7 @@ export class OpticalKernelRenderer {
     this.mapProgram = createProgram(gl, OPTICAL_MAP_FRAGMENT_SHADER);
     this.compositeProgram = createProgram(gl, OPTICAL_COMPOSITE_FRAGMENT_SHADER);
     this.sourceTexture = createTexture(gl);
+    this.ownedDecorationTexture = createTexture(gl);
     this.trackMapTexture = createTexture(gl);
     this.selectionMapTexture = createTexture(gl);
 
@@ -277,6 +282,21 @@ export class OpticalKernelRenderer {
     this.uploads += 1;
   }
 
+  private uploadOwnedDecoration(): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.ownedDecorationTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      this.ownedDecoration,
+    );
+  }
+
   private renderMap(
     texture: WebGLTexture,
     surface: 0 | 1,
@@ -328,7 +348,12 @@ export class OpticalKernelRenderer {
     this.mapRenders += 1;
   }
 
-  private renderComposite(width: number, height: number, sourceRect: DOMRect): void {
+  private renderComposite(
+    width: number,
+    height: number,
+    sourceRect: DOMRect,
+    controlRect: DOMRect,
+  ): void {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, width, height);
@@ -346,17 +371,37 @@ export class OpticalKernelRenderer {
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.selectionMapTexture);
     gl.uniform1i(requiredUniform(gl, this.compositeProgram, "u_selection_map"), 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.ownedDecorationTexture);
+    gl.uniform1i(
+      requiredUniform(gl, this.compositeProgram, "u_owned_decoration"),
+      3,
+    );
     gl.uniform2f(
       requiredUniform(gl, this.compositeProgram, "u_resolution"),
       sourceRect.width,
       sourceRect.height,
+    );
+    gl.uniform4f(
+      requiredUniform(gl, this.compositeProgram, "u_control_rect"),
+      controlRect.left - sourceRect.left,
+      controlRect.top - sourceRect.top,
+      controlRect.width,
+      controlRect.height,
+    );
+    gl.uniform1f(
+      requiredUniform(gl, this.compositeProgram, "u_selected_position"),
+      this.selectedPosition,
+    );
+    gl.uniform1f(
+      requiredUniform(gl, this.compositeProgram, "u_selection_velocity"),
+      this.selectionVelocity,
     );
     gl.uniform2f(
       requiredUniform(gl, this.compositeProgram, "u_light_direction"),
       -0.64,
       0.77,
     );
-    gl.uniform1f(requiredUniform(gl, this.compositeProgram, "u_energy"), this.energy);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
@@ -459,6 +504,7 @@ export class OpticalKernelRenderer {
     try {
       this.ensureMapTargets(width, height);
       this.uploadSourceIfNeeded(sourceDirty);
+      if (this.frames === 0) this.uploadOwnedDecoration();
       this.renderMap(
         this.trackMapTexture,
         0,
@@ -475,7 +521,7 @@ export class OpticalKernelRenderer {
         sourceRect,
         controlRect,
       );
-      this.renderComposite(width, height, sourceRect);
+      this.renderComposite(width, height, sourceRect, controlRect);
       this.frames += 1;
       this.lastRenderMs = Math.max(performance.now() - renderStart, 0.001);
       this.maxRenderMs = Math.max(this.maxRenderMs, this.lastRenderMs);
@@ -522,6 +568,7 @@ export class OpticalKernelRenderer {
     this.canvas.removeEventListener("webglcontextlost", this.handleContextLost);
     this.canvas.removeEventListener("webglcontextrestored", this.handleContextRestored);
     this.gl.deleteTexture(this.sourceTexture);
+    this.gl.deleteTexture(this.ownedDecorationTexture);
     this.gl.deleteTexture(this.trackMapTexture);
     this.gl.deleteTexture(this.selectionMapTexture);
     this.gl.deleteFramebuffer(this.mapFramebuffer);
@@ -548,6 +595,52 @@ export function resizeSourceCanvas(
   const context = canvas.getContext("2d", { alpha: false });
   context?.setTransform(dpr, 0, 0, dpr, 0, 0);
   return context;
+}
+
+export function drawOwnedDecoration(canvas: HTMLCanvasElement): void {
+  const width = 256;
+  const height = 128;
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: true });
+  if (!context) throw new Error("owned-decoration-context-unavailable");
+  context.clearRect(0, 0, width, height);
+
+  const body = context.createLinearGradient(0, 0, width, height);
+  body.addColorStop(0, "rgba(255, 255, 255, 0.32)");
+  body.addColorStop(0.38, "rgba(238, 249, 255, 0.18)");
+  body.addColorStop(0.72, "rgba(211, 231, 244, 0.11)");
+  body.addColorStop(1, "rgba(18, 31, 43, 0.14)");
+  context.fillStyle = body;
+  context.fillRect(0, 0, width, height);
+
+  const highlight = context.createRadialGradient(
+    width * 0.23,
+    height * 0.12,
+    0,
+    width * 0.23,
+    height * 0.12,
+    width * 0.68,
+  );
+  highlight.addColorStop(0, "rgba(255, 255, 255, 0.34)");
+  highlight.addColorStop(0.34, "rgba(255, 255, 255, 0.11)");
+  highlight.addColorStop(1, "rgba(255, 255, 255, 0)");
+  context.fillStyle = highlight;
+  context.fillRect(0, 0, width, height);
+
+  const occlusion = context.createRadialGradient(
+    width * 0.83,
+    height * 0.94,
+    0,
+    width * 0.83,
+    height * 0.94,
+    width * 0.58,
+  );
+  occlusion.addColorStop(0, "rgba(1, 8, 14, 0.18)");
+  occlusion.addColorStop(0.46, "rgba(1, 8, 14, 0.06)");
+  occlusion.addColorStop(1, "rgba(1, 8, 14, 0)");
+  context.fillStyle = occlusion;
+  context.fillRect(0, 0, width, height);
 }
 
 export function drawOpticalSource(

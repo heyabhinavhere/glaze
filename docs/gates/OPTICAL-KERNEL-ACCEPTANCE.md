@@ -1,8 +1,8 @@
 # Optical kernel acceptance gate
 
-Date: 2026-08-19
+Date: 2026-08-20
 
-Status: recovery candidate 1, revision 2; owner visual acceptance pending
+Status: final math-only transplant; owner visual acceptance pending
 
 ## Purpose
 
@@ -17,10 +17,12 @@ gate.
 - Control: one three-option `320 x 64` DOM radiogroup.
 - Sources: generated high-frequency reference, architecture, bright color,
   and dark/high-contrast fixtures.
-- Renderer: one transparent WebGL2 output sampling one owned Canvas 2D source.
+- Renderer: one transparent WebGL2 output sampling one owned Canvas 2D scene
+  plus one small visual-only decoration texture.
 - Material: unchanged across every source and selected state.
-- Geometry: one stable track plus one separate, continuous moving selection
-  lens. No SDF-lobe union or opaque selected pill.
+- Geometry: one stable outer body plus one separate, continuous moving
+  selection field blended by thickness. No SDF-lobe union, inner rim, or opaque
+  selected pill.
 - Motion: a damped spring may stretch/skew the single selection surface. The
   renderer stops requesting frames after the spring settles.
 
@@ -33,8 +35,10 @@ Both the stable track and selection maps are deterministic RGBA textures:
 - B: thickness; and
 - A: coverage.
 
-The composite pass samples the same source through both maps and derives
-surface normals from thickness gradients. It uses those normals for visible
+The composite pass samples the same base source through both maps and derives
+surface normals from thickness gradients. The selection additionally samples
+the visual-only owned decoration; it contains no labels or interactive content.
+The outer map supplies the only visible meniscus. Normals drive visible
 refraction, restrained dispersion, directional highlight, and opposing
 occlusion.
 
@@ -73,11 +77,11 @@ At `1280 x 720` and `390 x 844`:
    explicit reasons.
 7. The success path has no CSS material finish.
 8. Source-versus-composite probes cover every selected position on all four
-   fixtures. They require mean interior change greater than `5`, selected-lens
-   change greater than `28`, and a selected-lens-to-track ratio greater than
-   `1.8`. Mean perimeter change must remain below `34`, fewer than `55%` of
-   perimeter samples may reach channel-mean delta `28`, and mean outside
-   change must remain below `0.75`.
+   fixtures. They require mean interior change greater than `12` and non-empty
+   refracted output in every selected region. Mean perimeter change must remain
+   below `34`, fewer than `55%` of perimeter samples may reach channel-mean
+   delta `28`, and mean outside change must remain below `0.75`. No pixel ratio
+   is allowed to grant or steer aesthetic acceptance.
 9. There are no uncaught page errors, failed shaders/framebuffers, or leaked
    animation loops.
 
@@ -107,6 +111,6 @@ Do not change the public schema, add source adapters/components, build the
 workbench, publish, deploy, merge, or reopen a release PR before owner visual
 acceptance.
 
-This candidate has used both bounded owner-directed revisions. If revision 2
-fails, stop modifying the internal shader and follow the math-only transplant
-decision recorded in `docs/RECOVERY.md`.
+The hand-tuned candidate used both bounded owner-directed revisions and failed.
+This final math-only transplant is the only remaining candidate. If it fails
+owner review, record a product `NO-GO`; do not start another shader direction.

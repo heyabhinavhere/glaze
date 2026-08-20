@@ -32,6 +32,10 @@
   pointer-events: none;
 }
 
+.ownedDecoration {
+  display: none;
+}
+
 .header {
   position: absolute;
   z-index: 2;
@@ -141,7 +145,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: rgb(241 250 255 / 76%);
+  color: rgb(238 248 253 / 68%);
   font: 680 13px/1 ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.01em;
   text-shadow: 0 1px 8px rgb(0 10 18 / 58%);
@@ -151,6 +155,7 @@
 
 .option[aria-checked="true"] {
   color: #ffffff;
+  text-shadow: 0 1px 10px rgb(0 8 16 / 72%);
 }
 
 .option:focus-visible {

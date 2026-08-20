@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "../optical-kernel.module.css";
 import {
+  drawOwnedDecoration,
   drawOpticalSource,
   OPTICAL_MAP_CONTRACT,
   OpticalKernelRenderer,
@@ -25,6 +26,7 @@ declare global {
 export function OpticalKernelExperiment() {
   const stageRef = useRef<HTMLDivElement>(null);
   const sourceRef = useRef<HTMLCanvasElement>(null);
+  const ownedDecorationRef = useRef<HTMLCanvasElement>(null);
   const outputRef = useRef<HTMLCanvasElement>(null);
   const controlRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<OpticalKernelRenderer | null>(null);
@@ -72,9 +74,10 @@ export function OpticalKernelExperiment() {
   useEffect(() => {
     const stage = stageRef.current;
     const source = sourceRef.current;
+    const ownedDecoration = ownedDecorationRef.current;
     const output = outputRef.current;
     const control = controlRef.current;
-    if (!stage || !source || !output || !control) return;
+    if (!stage || !source || !ownedDecoration || !output || !control) return;
 
     let animationFrame = 0;
     let destroyed = false;
@@ -131,9 +134,11 @@ export function OpticalKernelExperiment() {
     };
 
     try {
+      drawOwnedDecoration(ownedDecoration);
       const renderer = new OpticalKernelRenderer({
         canvas: output,
         source,
+        ownedDecoration,
         control,
         selectedIndex: INITIAL_SELECTED_INDEX,
         onFallback: handleFallback,
@@ -241,6 +246,12 @@ export function OpticalKernelExperiment() {
       >
         <canvas ref={sourceRef} className={styles.source} aria-hidden="true" />
         <canvas
+          ref={ownedDecorationRef}
+          className={styles.ownedDecoration}
+          data-optical-source="owned-decoration"
+          aria-hidden="true"
+        />
+        <canvas
           ref={outputRef}
           className={styles.output}
           data-optical-output="true"
@@ -249,8 +260,8 @@ export function OpticalKernelExperiment() {
 
         <header className={styles.header}>
           <p>Glaze / renderer gate</p>
-          <h1 id="optical-kernel-title">One source. Two surfaces.</h1>
-          <span>Deterministic optical maps · {selectedBackground.label} source</span>
+          <h1 id="optical-kernel-title">One body. Bending light.</h1>
+          <span>Proven displacement math · {selectedBackground.label} source</span>
         </header>
 
         <div
@@ -311,7 +322,7 @@ export function OpticalKernelExperiment() {
               ? `${selectedBackground.label} source · refractive output`
               : "Accessible fallback"}
           </p>
-          <p>Track + selection · material stays fixed</p>
+          <p>One outer body · moving refractive selection</p>
         </footer>
       </section>
     </main>

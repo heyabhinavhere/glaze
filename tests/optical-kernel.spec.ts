@@ -93,7 +93,7 @@ async function openKernel(page: Page) {
   await page.goto("/optical-kernel");
   const stage = page.locator("section[data-renderer]");
   await expect(stage).toHaveAttribute("data-renderer", "webgl");
-  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-r3");
+  await expect(stage).toHaveAttribute("data-optical-map", "glaze-optical-map-transplant");
   await expect(page.locator("[data-nextjs-dialog]")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
   return stage;
@@ -209,7 +209,7 @@ test("switches across a four-source matrix without changing the optical material
   expect(finalDiagnostics?.mapRenders).toBe((finalDiagnostics?.frames ?? 0) * 2);
 });
 
-test("keeps the body visible without drawing a continuous perimeter", async ({ page }, testInfo) => {
+test("keeps refraction inside one bounded body without using pixel deltas as an aesthetic gate", async ({ page }, testInfo) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const stage = await openKernel(page);
   const sourcePicker = page.getByRole("radiogroup", { name: "Background scene" });
@@ -261,9 +261,8 @@ test("keeps the body visible without drawing a continuous perimeter", async ({ p
     contentType: "application/json",
   });
   for (const result of metrics) {
-    expect(result.bodyMean, `${result.background} body should visibly alter source pixels`).toBeGreaterThan(5);
-    expect(result.selectionBodyMean, `${result.background} segment ${result.selectedIndex} selected lens should remain visible at actual size`).toBeGreaterThan(28);
-    expect(result.selectionToTrackRatio, `${result.background} segment ${result.selectedIndex} selected lens should read as thicker than the track`).toBeGreaterThan(1.8);
+    expect(result.bodyMean, `${result.background} body should alter source pixels`).toBeGreaterThan(12);
+    expect(result.selectionBodyMean, `${result.background} segment ${result.selectedIndex} should contain refracted output`).toBeGreaterThan(8);
     expect(result.perimeterMean, `${result.background} edge energy should stay bounded`).toBeLessThan(34);
     expect(result.perimeterStrokeFraction, `${result.background} edge should not form a uniform bright contour`).toBeLessThan(0.55);
     expect(result.outsideMean, `${result.background} pixels outside the material should remain unchanged`).toBeLessThan(0.75);

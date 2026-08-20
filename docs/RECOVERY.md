@@ -1,12 +1,12 @@
 # Glaze recovery ledger
 
-Date: 2026-08-19
+Date: 2026-08-20
 
 Active branch: `aj/glaze-optics-recovery`
 
-Active gate: optical kernel candidate 1, revision 2 (final shader revision)
+Active gate: final math-only displacement transplant
 
-Owner visual decision: **FINAL REVISION PENDING**
+Owner visual decision: **FINAL TRANSPLANT CANDIDATE PENDING**
 
 ## Product promise
 
@@ -40,30 +40,40 @@ almost invisible at real size. Revision 1 improved source-pixel deltas but
 still depended on background detail and a directional edge to communicate
 the selected body. That numeric improvement did not satisfy the visual gate.
 
-`glaze-optical-map-r3` is bounded revision 2, the final internal shader
-revision. It renders one `320 x 64`
-segmented control from one owned
-Canvas 2D source. It generates two deterministic GPU maps:
+The owner rejected `glaze-optical-map-r3` on 2026-08-20 because it was still
+effectively invisible at real size and contained additional visual mistakes.
+The selected body was communicated by cyan absorption and broad synthetic
+lighting instead of coherent refraction. Sampling the page scene through both
+the outer track and inner lens produced competing nested shapes. Passing pixel
+delta thresholds did not make the material convincing.
+
+`glaze-optical-map-transplant` is the final permitted experiment. Its
+spherical-cap normalization and inward meniscus math are adapted from the
+MIT-licensed `samasante/liquid-glass` implementation at commit
+`4e7b769e1df7e5a7d3669fef22417fe3d2f79ade`; the required notice is preserved
+in `THIRD_PARTY_NOTICES.md`.
+
+The transplant retains Glaze's semantic DOM, renderer ownership, spring,
+diagnostics, context handling, zero-idle scheduling, and RGBA contract. It
+renders one `320 x 64` segmented control from one owned Canvas 2D scene and one
+small visual-only decoration canvas. The decoration contains no labels, IDs,
+forms, events, or interactive content. Two deterministic GPU maps remain:
 
 1. a stable track map; and
 2. one continuous moving selection map.
 
 Each map stores horizontal displacement, vertical displacement, thickness,
-and coverage. The composite pass samples the same source through both maps,
-derives lighting from thickness gradients, emits premultiplied output, and
-keeps semantic DOM labels above the optical layer.
+and coverage. The stable track supplies the only visible outer meniscus. The
+selection map is thickness-weighted into that body as a moving refractive
+bulge, so it does not draw a second pill or contour. The composite uses fixed
+neutral transmission, restrained chromatic dispersion, a directional
+highlight, and opposing occlusion. It emits premultiplied output and leaves the
+single authoritative DOM label tree above the optical layer.
 
-This candidate removes the rejected `max()`-merged height field, leading and
-trailing SDF lobes, adaptive gray volume wash, scene-specific values, and
-continuous render loop. A directional renderer-native rim is permitted; a
-uniform border, double contour, CSS glow, and neon halo are not.
-
-Revision 2 keeps one material and makes the body independently legible on
-quiet pixels: the stable track remains thinner, the selected lens is thicker,
-source displacement increases with thickness, normals drive directional
-Fresnel and opposing occlusion, and cyan-biased absorption plus environment
-transmission span the body instead of concentrating visibility at the edge.
-The values are unchanged across all four scenes and all three selected states.
+The same private material constants run on all four scenes and all three
+states. The rejected cyan absorption, hard inner oval, page-specific values,
+CSS finish, and aesthetic source-pixel ratio gates are absent. No other
+library's React tree or lifecycle was imported.
 
 ## Gate authority
 
@@ -89,11 +99,10 @@ Until the owner accepts the optical kernel, do not:
 
 ## Stop rule
 
-Candidate 1 has used both bounded owner-directed revisions. If revision 2
-fails, stop changing this shader. The only remaining experiment is a
-license-verified, math-only displacement transplant behind Glaze's semantic
-and lifecycle layer. If that also fails owner review, record a product
-`NO-GO`; do not retreat to decorative CSS or widen the capture problem.
+Candidate 1 used both bounded owner-directed revisions and failed owner review.
+The license-verified, math-only displacement transplant is the final candidate.
+If it fails owner review, record a product `NO-GO`; do not tune another shader,
+retreat to decorative CSS, or widen the capture problem.
 
 ## Verification commands
 
