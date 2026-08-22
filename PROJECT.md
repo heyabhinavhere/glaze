@@ -66,8 +66,11 @@ demand-driven and stops once the source and spring are idle.
 - Actual macOS VoiceOver and Safari pass on an optimized retained Next.js 16
   consumer installed from the package tarball; semantics and keyboard state
   changes were verified and restored.
-- Physical iPhone/iPad, real-product Next.js dogfood, final live owner review,
-  publication, deployment, and merge remain owner-controlled release gates.
+- A credential-free disposable copy of BON Credit Demo passes an installed
+  tarball dogfood route in its real Next.js 16/Tailwind product environment;
+  the dirty BON source repository was not changed.
+- Physical iPhone/iPad, final live owner review, publication, deployment, and
+  merge remain owner-controlled release gates.
 
 The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 The exact automated/manual split lives in `docs/RELEASE-READINESS.md`.
@@ -97,8 +100,8 @@ The exact automated/manual split lives in `docs/RELEASE-READINESS.md`.
 3. **Complete:** the serializable public material/API is frozen.
 4. **Complete:** the workbench is connected to the exact runtime material.
 5. **Active:** automated repository and packed-consumer gates are complete;
-   physical-device, real-product dogfood, final owner review, and release
-   authorization remain before merge or publication.
+   physical-device, final owner review, and release authorization remain before
+   merge or publication.
 
 No later gate may begin early.
 

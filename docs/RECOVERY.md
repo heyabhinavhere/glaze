@@ -6,7 +6,7 @@ Accepted recovery branch: `aj/glaze-optics-recovery` at `162c1cb`
 
 Active product branch: `aj/glaze-component-system`
 
-Active gate: physical-device, dogfood, and final owner release review
+Active gate: physical-device and final owner release review
 
 Owner visual decision: **ACCEPTED 2026-08-22**
 
@@ -115,11 +115,14 @@ optimized-production matrices in Chromium, Firefox, and WebKit. Packed React
 18, React 19, and Next.js 16 consumers also pass from the installed tarball.
 Real-scale review of the optimized build passes in actual macOS Chrome and
 Safari. Actual macOS VoiceOver and Safari also pass against an optimized
-Next.js 16 consumer installed from the package tarball. Physical iPhone/iPad,
-real-product Next.js dogfood, final live owner review, publication, deployment,
-release PRs, and component-specific optical patches remain blocked. Arbitrary
-DOM capture, `html2canvas`, automatic source detection, and CSS glassmorphism
-as the primary renderer remain permanently rejected.
+Next.js 16 consumer installed from the package tarball. A credential-free
+disposable copy of the current BON Credit Demo also passes a product-themed
+installed-tarball route in its real Next.js 16/Tailwind environment without
+changing the dirty BON source repository. Physical iPhone/iPad, final live
+owner review, publication, deployment, release PRs, and component-specific
+optical patches remain blocked. Arbitrary DOM capture, `html2canvas`, automatic
+source detection, and CSS glassmorphism as the primary renderer remain
+permanently rejected.
 
 ## Public API and workbench proof
 

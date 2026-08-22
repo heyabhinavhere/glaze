@@ -4,7 +4,7 @@ Date: 2026-08-22
 
 Branch: `aj/glaze-component-system`
 
-Verdict: **GO for physical-device and real-product dogfood review; NO-GO for
+Verdict: **GO for physical-device and final owner review; NO-GO for
 merge, deployment, or publication until the remaining manual gates close.**
 
 The owner-accepted optical material is unchanged. This document separates
@@ -106,16 +106,35 @@ with the Right Arrow, kept `webgl2-displacement-map` effective with fallback
 This closes the macOS keyboard and VoiceOver gate. It does not substitute for
 VoiceOver on physical iPhone/iPad hardware.
 
+## Completed real-product dogfood
+
+On 2026-08-22, the current BON Credit Demo working state was copied into a
+credential-free disposable directory so its dirty source repository remained
+untouched. The copy installed the exact `@glazelab/react@0.1.0-alpha.0` tarball
+and ran an isolated product-themed route inside BON's real Next.js 16.1.6 and
+Tailwind environment.
+
+TypeScript, focused integration lint, and the full optimized production build
+passed. Actual Safari reported `owned-decoration`,
+`webgl2-displacement-map`, and fallback `None`; its single radiogroup, switch,
+and slider all responded to keyboard input and were restored. The host product
+has unrelated pre-existing lint errors and dependency advisories, neither of
+which was altered or represented as a Glaze pass. Exact hashes, commands,
+boundaries, and caveats are recorded in the
+[BON Credit dogfood evidence](evidence/release/bon-credit-dogfood-2026-08-22.md).
+
+This closes the real-product compatibility/dogfood gate. It does not land a
+BON product change or replace final owner review.
+
 ## Remaining manual gates
 
 These are release blockers:
 
 1. physical iPhone review in Safari;
 2. physical iPad review in Safari;
-3. dogfooding the installed tarball in one real Next.js product consumer;
-4. final owner review of the live installed component, including the visible
+3. final owner review of the live installed component, including the visible
    CSS fallback with optical support disabled; and
-5. explicit authorization for merge, deployment, or npm publication.
+4. explicit authorization for merge, deployment, or npm publication.
 
 No screenshot, browser automation result, or agent judgment closes these
 manual gates. Failure of any gate stops release and permits only one diagnosed,
