@@ -49,8 +49,8 @@ function OwnedArtwork() {
         {horizontals.map((y) => <path key={`h-${y}`} d={`M0 ${y} H960`} />)}
       </g>
       <g fill="#f8fdff" opacity="0.76">
-        <rect x="74" y="82" width="280" height="12" rx="6" />
-        <rect x="74" y="112" width="188" height="7" rx="3.5" />
+        <rect x="74" y="170" width="280" height="12" rx="6" />
+        <rect x="74" y="200" width="188" height="7" rx="3.5" />
         <rect x="706" y="580" width="174" height="9" rx="4.5" />
       </g>
     </svg>

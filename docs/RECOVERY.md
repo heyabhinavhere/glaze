@@ -187,6 +187,8 @@ corepack pnpm test:component-proof
 corepack pnpm test:component-proof:production
 corepack pnpm test:public-api
 corepack pnpm test:public-api:production
+corepack pnpm test:mobile-release
+corepack pnpm test:mobile-release:production
 corepack pnpm test:consumers
 corepack pnpm test:packed-consumers
 corepack pnpm --filter @glazelab/react size

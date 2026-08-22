@@ -36,7 +36,9 @@
     "test:component-proof": "playwright test -c playwright.component-proof.config.ts tests/component-system.spec.ts",
     "test:component-proof:production": "COMPONENT_PROOF_PRODUCTION=1 playwright test -c playwright.component-proof.config.ts tests/component-system.spec.ts",
     "test:public-api": "corepack pnpm --filter @glazelab/react build && playwright test -c playwright.public-api.config.ts tests/public-api.spec.ts",
-    "test:public-api:production": "corepack pnpm --filter @glazelab/react build && corepack pnpm --filter playground build && PUBLIC_API_PRODUCTION=1 playwright test -c playwright.public-api.config.ts tests/public-api.spec.ts"
+    "test:public-api:production": "corepack pnpm --filter @glazelab/react build && corepack pnpm --filter playground build && PUBLIC_API_PRODUCTION=1 playwright test -c playwright.public-api.config.ts tests/public-api.spec.ts",
+    "test:mobile-release": "playwright test -c playwright.mobile-release.config.ts tests/mobile-release.spec.ts",
+    "test:mobile-release:production": "corepack pnpm --filter playground build && MOBILE_RELEASE_PRODUCTION=1 playwright test -c playwright.mobile-release.config.ts tests/mobile-release.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

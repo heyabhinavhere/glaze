@@ -56,6 +56,9 @@ demand-driven and stops once the source and spring are idle.
 - Source replacement, DPR resize, offscreen suspension, observer cleanup,
   unavailable-WebGL fallback, and tainted-source failure/recovery pass in both
   development and optimized-production public matrices.
+- Focused iPhone/iPad WebKit preflights pass responsive layout, capped DPR,
+  touch interaction, offscreen resume, semantics, and renderer stability in
+  development and optimized production. Physical hardware remains required.
 - Packed React 18, React 19, and Next.js 16 consumers build and run from the
   installed tarball rather than a workspace link.
 - The optimized production build passed real-scale interaction review in
@@ -108,6 +111,8 @@ corepack pnpm test:component-proof
 corepack pnpm test:component-proof:production
 corepack pnpm test:public-api
 corepack pnpm test:public-api:production
+corepack pnpm test:mobile-release
+corepack pnpm test:mobile-release:production
 corepack pnpm test:consumers
 corepack pnpm test:packed-consumers
 corepack pnpm --filter @glazelab/react size

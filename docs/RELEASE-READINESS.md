@@ -24,6 +24,8 @@ approval.
 | Public package unit suite | 27/27 passed |
 | Public API, development | 26 applicable passes; 22 declared one-browser probe skips |
 | Public API, optimized production | 26 applicable passes; 22 declared one-browser probe skips |
+| iPhone/iPad WebKit preflight, development | 4/4 passed |
+| iPhone/iPad WebKit preflight, optimized production | 4/4 passed |
 | Workspace React 19 and Next.js 16 consumers | 2/2 browser checks passed |
 | Installed tarball consumers | React 18, React 19, and Next.js 16 builds passed; 2/2 browser checks passed |
 | Repository build | Passed for core, React package, playground, Vite example, and Next.js example |
@@ -49,6 +51,14 @@ The final public matrix verifies:
 - offscreen media suspension;
 - observer and renderer-output cleanup on unmount; and
 - deterministic `source-not-origin-clean` failure plus clean-source recovery.
+
+The separate mobile preflight uses iPhone 15 and iPad (7th generation) WebKit
+profiles. It verifies responsive placement, no horizontal overflow, capped DPR
+2 backing stores, touch action, below-fold suspension and resume, semantic
+updates, renderer stability, console cleanliness, and full-page real-size
+captures. The optimized-production captures were also inspected at real size for
+source-label legibility, component overlap, and workbench placement. This is a
+preflight only; it does not close the physical-device gate.
 
 ## Bundle gates
 
@@ -109,6 +119,8 @@ corepack pnpm test:component-proof
 corepack pnpm test:component-proof:production
 corepack pnpm test:public-api
 corepack pnpm test:public-api:production
+corepack pnpm test:mobile-release
+corepack pnpm test:mobile-release:production
 corepack pnpm test:consumers
 corepack pnpm test:packed-consumers
 ```
