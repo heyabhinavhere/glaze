@@ -68,9 +68,12 @@ ready. `@glazelab/react/material` has no client directive or browser access.
 ## Fallback truth
 
 Unsupported WebGL, forced colors, invalid source contracts, media failures,
-tainted uploads, and context loss select `css-fallback` with an inspectable
-reason. Context restoration creates a fresh renderer. The semantic control tree
-does not change.
+tainted sources, and context loss select `css-fallback` with an inspectable
+reason. Image and video descriptors receive a bounded origin-clean check on
+first paint; subscribed canvas sources are checked on redraw. A clean
+replacement clears a prior taint and can recover without replacing a
+same-kind renderer. Context restoration creates a fresh renderer. The semantic
+control tree does not change.
 
 This contract may not grow or change during release verification without
 reopening the API gate and rerunning public and packed-consumer matrices.

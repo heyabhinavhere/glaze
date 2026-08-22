@@ -1,0 +1,50 @@
+.page {
+  min-height: 2600px;
+  padding: 28px;
+  background: #07111d;
+  color: #f4fbff;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.page h1 {
+  margin: 0 0 18px;
+  font-size: 28px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.actions button {
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 8px;
+  background: #182b43;
+  color: inherit;
+}
+
+.surface {
+  height: 440px;
+  max-width: calc(100vw - 56px);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 24px;
+  transition: width 80ms linear;
+}
+
+.content {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  gap: 40px;
+  width: min(360px, calc(100% - 32px));
+  transform: translate(-50%, -50%);
+}
+
+.offscreenTarget {
+  margin-top: 1900px;
+}

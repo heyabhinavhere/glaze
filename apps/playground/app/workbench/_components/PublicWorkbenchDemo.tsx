@@ -77,7 +77,10 @@ function Controls({
   onTransmissionChange,
 }: ControlsProps) {
   return (
-    <div className={styles.controls}>
+    <form
+      className={styles.controls}
+      onSubmit={(event) => event.preventDefault()}
+    >
       <GlazeSegmentedControl
         aria-label={`${prefix} view mode`}
         segments={SEGMENTS}
@@ -98,7 +101,7 @@ function Controls({
         value={transmission}
         onValueChange={onTransmissionChange}
       />
-    </div>
+    </form>
   );
 }
 

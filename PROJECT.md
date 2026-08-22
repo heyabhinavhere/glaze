@@ -6,7 +6,7 @@ Product line: `aj/glaze-component-system`
 
 Accepted optical source: `aj/glaze-optics-recovery` at `162c1cb`
 
-Status: **public API and workbench passed; release verification active**
+Status: **automated verification passed; manual device release gates active**
 
 ## Product target
 
@@ -53,12 +53,19 @@ demand-driven and stops once the source and spring are idle.
 - The exact-material workbench, truthful diagnostics, lazy optics/workbench
   chunks, context restoration, zero-idle scheduling, and source-contract
   failure behavior pass their public browser gates.
+- Source replacement, DPR resize, offscreen suspension, observer cleanup,
+  unavailable-WebGL fallback, and tainted-source failure/recovery pass in both
+  development and optimized-production public matrices.
 - Packed React 18, React 19, and Next.js 16 consumers build and run from the
   installed tarball rather than a workspace link.
-- Publication, deployment, merge, and physical-device approval remain later
-  owner-controlled release gates.
+- The optimized production build passed real-scale interaction review in
+  actual macOS Chrome and Safari.
+- Physical iPhone/iPad, VoiceOver, real-product Next.js dogfood, final live
+  owner review, publication, deployment, and merge remain owner-controlled
+  release gates.
 
 The decision ledger and stopping rules live in `docs/RECOVERY.md`.
+The exact automated/manual split lives in `docs/RELEASE-READINESS.md`.
 
 ## Retained assets
 
@@ -84,8 +91,9 @@ The decision ledger and stopping rules live in `docs/RECOVERY.md`.
    slider across owned decoration and explicit media.
 3. **Complete:** the serializable public material/API is frozen.
 4. **Complete:** the workbench is connected to the exact runtime material.
-5. **Active:** repository, accessibility, packed-consumer, physical-device,
-   and release gates run before merge or publication.
+5. **Active:** automated repository and packed-consumer gates are complete;
+   physical-device, VoiceOver, real-product dogfood, final owner review, and
+   release authorization remain before merge or publication.
 
 No later gate may begin early.
 

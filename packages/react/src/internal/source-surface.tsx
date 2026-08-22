@@ -93,6 +93,19 @@ function validateMediaSource(source: GlazeMediaSource | undefined) {
   return undefined;
 }
 
+function mediaSourceDescriptorKey(
+  source: GlazeMediaSource | undefined,
+): string | undefined {
+  if (!source) return undefined;
+  if (source.type === "image") {
+    return `image:${source.src}|${source.crossOrigin ?? ""}|${
+      source.focalPoint?.join(",") ?? ""
+    }`;
+  }
+  if (source.type === "video") return `video:${JSON.stringify(source)}`;
+  return "canvas";
+}
+
 export function SourceSurface({
   capability,
   children,
@@ -108,6 +121,7 @@ export function SourceSurface({
   const { motion, registerSurface } = runtime;
   const material = useGlazeMaterial(materialName, materialDefaults);
   const mediaSourceType = mediaSource?.type;
+  const desiredMediaSourceKey = mediaSourceDescriptorKey(mediaSource);
   const sourceValidationReason = validateMediaSource(mediaSource);
   const elementContractReasons = useMemo(
     () => inspectOwnedDecorationElement(ownedSource),
@@ -137,11 +151,21 @@ export function SourceSurface({
   const [rendererIdentity, setRendererIdentity] = useState<{
     readonly id: number;
     readonly kind: GlazeRendererDiagnostics["renderer"];
+    readonly sourceType: GlazeMediaSource["type"] | undefined;
   } | null>(null);
+  const [activeMediaSourceKey, setActiveMediaSourceKey] = useState<
+    string | undefined
+  >(undefined);
   const [controlCount, setControlCount] = useState(0);
+  const rendererMatchesSource = !rendererIdentity
+    || rendererIdentity.sourceType === mediaSourceType;
+  const sourceTransitioning = capability === "explicit-media"
+    && desiredMediaSourceKey !== activeMediaSourceKey;
   const effectiveRendererState = sourceValidationReason
     ? "fallback"
-    : rendererState;
+    : sourceTransitioning || !rendererMatchesSource
+      ? "initializing"
+      : rendererState;
   const capabilityResult: GlazeCapabilityResult = useMemo(
     () => ({
       requested: capability,
@@ -150,12 +174,16 @@ export function SourceSurface({
         : "css-fallback",
       reason: effectiveRendererState === "webgl"
         ? undefined
-        : sourceValidationReason ?? fallbackReason,
+        : sourceValidationReason
+          ?? (effectiveRendererState === "initializing" && sourceTransitioning
+            ? "explicit-media-source-loading"
+            : fallbackReason),
     }),
     [
       capability,
       effectiveRendererState,
       fallbackReason,
+      sourceTransitioning,
       sourceValidationReason,
     ],
   );
@@ -266,6 +294,7 @@ export function SourceSurface({
     let sourceValid = false;
     let visible = true;
     let sourcePaintVersion = 0;
+    let verifiedOriginCleanKey: string | undefined;
     let initializationStarted = false;
     let warnedInvalidSource = false;
     const reducedMotion = window.matchMedia(
@@ -357,12 +386,24 @@ export function SourceSurface({
             ? video ? drawVideoSource(source, video) : false
             : drawCanvasSource(source, currentSource);
         if (painted) {
+          const paintedKey = mediaSourceDescriptorKey(currentSource);
+          if (
+            currentSource.type === "canvas"
+            || verifiedOriginCleanKey !== paintedKey
+          ) {
+            source.getContext("2d")?.getImageData(0, 0, 1, 1);
+            verifiedOriginCleanKey = paintedKey;
+          }
           sourceValid = true;
+          setActiveMediaSourceKey((current) =>
+            current === paintedKey ? current : paintedKey
+          );
           scheduleFrame(true);
         }
         return painted;
       } catch (error) {
         sourceValid = false;
+        setActiveMediaSourceKey(mediaSourceDescriptorKey(currentSource));
         handleFallback(
           error instanceof DOMException && error.name === "SecurityError"
             ? "source-not-origin-clean"
@@ -440,6 +481,7 @@ export function SourceSurface({
         setRendererIdentity({
           id: renderer.rendererId,
           kind: "webgl2-displacement-map",
+          sourceType: mediaSourceType,
         });
         for (const registration of pendingControls.current.values()) {
           renderer.registerControl(registration);
@@ -515,6 +557,7 @@ export function SourceSurface({
     };
     const handleMediaError = () => {
       sourceValid = false;
+      setActiveMediaSourceKey(mediaSourceDescriptorKey(mediaSourceRef.current));
       handleFallback("explicit-media-load-failed");
     };
     image?.addEventListener("load", handleMediaReady);
@@ -571,13 +614,11 @@ export function SourceSurface({
   }, [elementContractReasons, ownedSource]);
 
   const imageSourceKey = mediaSource?.type === "image"
-    ? `${mediaSource.src}|${mediaSource.crossOrigin ?? ""}|${
-      mediaSource.focalPoint?.join(",") ?? ""
-    }`
-    : "";
+    ? desiredMediaSourceKey
+    : undefined;
   const videoSourceKey = mediaSource?.type === "video"
-    ? JSON.stringify(mediaSource)
-    : "";
+    ? desiredMediaSourceKey
+    : undefined;
   const canvasDraw = mediaSource?.type === "canvas"
     ? mediaSource.draw
     : undefined;
@@ -589,9 +630,13 @@ export function SourceSurface({
     const currentSource = mediaSourceRef.current;
     if (currentSource?.type === "image") {
       if (!currentSource.src) return;
+      const source = sourceRef.current;
+      if (source) source.width = source.width;
       repaintRef.current?.();
     } else if (currentSource?.type === "video") {
       if (currentSource.sources.length === 0) return;
+      const source = sourceRef.current;
+      if (source) source.width = source.width;
       videoRef.current?.load();
     }
   }, [imageSourceKey, mediaSourceType, videoSourceKey]);

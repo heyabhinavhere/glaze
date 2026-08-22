@@ -48,12 +48,20 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: production
-      ? "corepack pnpm --filter playground exec next start --hostname 127.0.0.1 --port 3192"
-      : "corepack pnpm --filter playground exec next dev --hostname 127.0.0.1 --port 3192",
-    url: "http://127.0.0.1:3192/workbench",
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: production
+        ? "corepack pnpm --filter playground exec next start --hostname 127.0.0.1 --port 3192"
+        : "corepack pnpm --filter playground exec next dev --hostname 127.0.0.1 --port 3192",
+      url: "http://127.0.0.1:3192/workbench",
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      command: "node tests/fixtures/cors-image-server.mjs",
+      url: "http://127.0.0.1:3193/health",
+      reuseExistingServer: false,
+      timeout: 10_000,
+    },
+  ],
 });

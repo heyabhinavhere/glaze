@@ -28,6 +28,8 @@
     pointer-events: none;
   }
 
+  .glaze-source-surface[data-glaze-renderer="initializing"]
+    .glaze-source-surface__output,
   .glaze-source-surface[data-glaze-renderer="fallback"]
     .glaze-source-surface__output {
     opacity: 0;

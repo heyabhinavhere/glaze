@@ -6,7 +6,7 @@ Accepted recovery branch: `aj/glaze-optics-recovery` at `162c1cb`
 
 Active product branch: `aj/glaze-component-system`
 
-Active gate: final verification after the public API and workbench proof
+Active gate: physical-device, VoiceOver, dogfood, and final owner release review
 
 Owner visual decision: **ACCEPTED 2026-08-22**
 
@@ -113,10 +113,12 @@ Component extraction was authorized in this order:
 The public contract and exact-material workbench now pass development and
 optimized-production matrices in Chromium, Firefox, and WebKit. Packed React
 18, React 19, and Next.js 16 consumers also pass from the installed tarball.
-Publication, deployment, release PRs, physical-device approval, and
-component-specific optical patches remain blocked. Arbitrary DOM capture,
-`html2canvas`, automatic source detection, and CSS glassmorphism as the primary
-renderer remain permanently rejected.
+Real-scale review of the optimized build passes in actual macOS Chrome and
+Safari. Physical iPhone/iPad, VoiceOver, real-product Next.js dogfood, final
+live owner review, publication, deployment, release PRs, and component-specific
+optical patches remain blocked. Arbitrary DOM capture, `html2canvas`, automatic
+source detection, and CSS glassmorphism as the primary renderer remain
+permanently rejected.
 
 ## Public API and workbench proof
 
@@ -132,6 +134,12 @@ shared chunks remain within the original 8 KiB brotli budget. The accepted
 optics chunk measured 6,078 bytes brotli; its enforced ceiling is 10% above
 that measurement. Workbench output is disabled by default in production unless
 the consumer deliberately enables it.
+
+The final public lifecycle matrix is recorded in
+`docs/RELEASE-READINESS.md`. It covers source replacement, canvas invalidation,
+DPR resize, reduced motion, offscreen suspension, cleanup, unavailable WebGL,
+and deterministic tainted-source failure and recovery without changing the
+accepted optical shader.
 
 ## Component-system proof
 

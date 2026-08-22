@@ -75,6 +75,9 @@ requested; the pure material entry remains server-safe.
 - DPR is capped at 2 and resize/zero-size transitions remain recoverable.
 - Context loss fails closed to the semantic fallback and restoration creates a
   fresh renderer; unsafe uploads remain in the fallback with a visible reason.
+- Image/video sources are origin-clean checked once per descriptor; subscribed
+  canvas sources are checked on redraw. Replacing a tainted image/video clears
+  the owned source canvas before repaint so a clean source can recover.
 - Every texture, framebuffer, buffer, program, observer, callback, and listener
   is released by its owner.
 
