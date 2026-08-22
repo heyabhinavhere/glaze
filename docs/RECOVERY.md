@@ -6,7 +6,7 @@ Accepted recovery branch: `aj/glaze-optics-recovery` at `162c1cb`
 
 Active product branch: `aj/glaze-component-system`
 
-Active gate: component-system extraction with frozen optics
+Active gate: public API freeze after the component-system proof
 
 Owner visual decision: **ACCEPTED 2026-08-22**
 
@@ -101,20 +101,48 @@ library's React tree or lifecycle was imported.
 
 ## Unlocked work and remaining freezes
 
-Component extraction is now authorized in this order:
+Component extraction was authorized in this order:
 
-1. port the accepted kernel into the validated React foundation;
-2. prove owned decoration and explicit media across segmented control, switch,
-   slider, and one live video or canvas source without changing the material;
-3. freeze the public API only after that proof passes; and
-4. build the workbench against the exact live material only after the API is
-   frozen.
+1. **Complete:** port the accepted kernel into the validated React foundation;
+2. **Complete:** prove owned decoration and explicit media across segmented
+   control, switch, slider, and one live video source without changing the
+   material;
+3. **Active:** freeze the serializable public API; and
+4. **Pending:** build the workbench against the exact live material after the
+   API is frozen.
 
-Until the multi-component proof passes, do not change the public material
-schema, expand the workbench, publish, deploy, merge a release PR, or introduce
-component-specific optical patches. Arbitrary DOM capture, `html2canvas`,
-automatic source detection, and CSS glassmorphism as the primary renderer
-remain permanently rejected.
+The multi-component proof has passed, so the public contract may now be
+implemented and frozen. Workbench expansion remains blocked until that freeze
+is complete. Publication, deployment, release PRs, and component-specific
+optical patches remain blocked. Arbitrary DOM capture, `html2canvas`, automatic
+source detection, and CSS glassmorphism as the primary renderer remain
+permanently rejected.
+
+## Component-system proof
+
+The private `/component-proof` route proves both authorized source contracts:
+
+- `owned-decoration` serializes one inert, `aria-hidden` React SVG and rejects
+  IDs, events, interactive elements, forms, labels, editable content, and
+  explicitly sensitive nodes;
+- `explicit-media` draws one same-origin live video into an owned canvas and
+  uploads only presented frames; and
+- each source surface owns one WebGL renderer and one source texture shared by
+  a segmented control, switch, and slider.
+
+All six controls use the accepted optical shader and material-decoration
+pixels. The only shader generalization replaces the literal three-segment
+division with a registered selection-count uniform. A source-level invariance
+test removes that mechanical substitution and requires the remaining vertex,
+map, composite, and material-decoration sources to match the accepted kernel.
+
+Development and optimized-production matrices each completed with 22 passes
+and two intentional duplicate-project SSR skips across Chromium, Firefox, and
+WebKit. They verify SSR output, one authoritative interactive tree, renderer
+ownership, control registration, keyboard semantics, reduced motion,
+demand-driven idle shutdown, live and paused video scheduling, truthful CSS
+fallback, source-contract rejection, and fail-closed context loss. Screenshots
+are run evidence only and have not been blessed as new visual goldens.
 
 ## Optical freeze rule
 
@@ -131,6 +159,9 @@ the owner gate explicitly.
 corepack pnpm test:optical-kernel:unit
 corepack pnpm test:optical-kernel
 corepack pnpm test:optical-kernel:production
+corepack pnpm test:component-proof:unit
+corepack pnpm test:component-proof
+corepack pnpm test:component-proof:production
 corepack pnpm --filter playground typecheck
 corepack pnpm --filter playground lint
 corepack pnpm --filter playground build

@@ -6,14 +6,15 @@ Product line: `aj/glaze-component-system`
 
 Accepted optical source: `aj/glaze-optics-recovery` at `162c1cb`
 
-Status: **optical kernel accepted; component-system extraction authorized**
+Status: **component-system proof passed; public API freeze active**
 
 ## Product target
 
 Glaze is a React and Next.js component system that gives semantic controls
-convincing liquid-glass optics over explicitly owned visual sources. After the
-accepted material passes the multi-component proof, an in-app developer
-workbench will tune and export that same live material.
+convincing liquid-glass optics over explicitly owned visual sources. The
+accepted material now passes the private multi-component proof. The next gate
+freezes the serializable public API; an in-app developer workbench will then
+tune and export that exact live material.
 
 The product does not promise arbitrary page capture, automatic backdrop
 inference, cross-browser pixel identity, or Apple parity.
@@ -41,9 +42,12 @@ demand-driven and stops once the source and spring are idle.
   product gate. Draft PR #6 is closed.
 - The rejected M2 visual reset is preserved at `aj/glaze-visual-reset`
   commit `371a110` and cannot re-enter the product path.
-- Component extraction is authorized. The public API and workbench remain
-  frozen until the unchanged material passes the multi-component proof;
-  publication, deployment, and release remain later gates.
+- `/component-proof` runs the unchanged accepted optics over one inert owned
+  React SVG and one same-origin live video. Each source has one renderer shared
+  by a segmented control, switch, and slider.
+- The component proof passes its development and optimized-production browser
+  matrices in Chromium, Firefox, and WebKit. The public API may now be frozen;
+  the workbench, publication, deployment, and release remain later gates.
 
 The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 
@@ -67,9 +71,9 @@ The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 ## Gate order
 
 1. **Complete:** owner accepts one real-size optical kernel.
-2. The unchanged material proves segmented control, switch, and slider across
-   owned decoration and explicit media.
-3. The serializable public material/API is frozen.
+2. **Complete:** the unchanged material proves segmented control, switch, and
+   slider across owned decoration and explicit media.
+3. **Active:** the serializable public material/API is frozen.
 4. The workbench is connected to the exact runtime material.
 5. Cross-browser, packed-consumer, physical-device, accessibility, and release
    gates run before merge or publication.
@@ -82,6 +86,9 @@ No later gate may begin early.
 corepack pnpm test:optical-kernel:unit
 corepack pnpm test:optical-kernel
 corepack pnpm test:optical-kernel:production
+corepack pnpm test:component-proof:unit
+corepack pnpm test:component-proof
+corepack pnpm test:component-proof:production
 corepack pnpm --filter playground typecheck
 corepack pnpm --filter playground lint
 corepack pnpm --filter playground build
