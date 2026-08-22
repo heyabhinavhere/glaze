@@ -49,6 +49,14 @@ diagnostics. No arbitrary page capture or duplicate control tree was added.
 - real-scale engineering inspection showed visible accepted optics, preserved
   labels, and no source-title/control overlap. This is not owner visual
   acceptance of the BON integration.
+- a second test-only route disabled only WebGL contexts before Glaze mounted.
+  Host-executed Playwright WebKit reported requested `owned-decoration`,
+  effective `css-fallback`, renderer `fallback`, reason
+  `webgl2-unavailable`, three controls, successful radio interaction, HTTP
+  `200`, and zero page/console errors.
+- full-page normal and forced-fallback captures were inspected at real size.
+  The fallback remained visible, semantic, source-preserving, and truthful; it
+  was not represented as the liquid-glass renderer.
 
 The host product's repository-wide lint remained red because of three existing
 errors outside the dogfood route. `npm install` also reported one low and eight
@@ -59,5 +67,5 @@ attempted, and these host-project issues are not recorded as Glaze passes.
 
 This closes Glaze's real-product compatibility/dogfood gate without mutating a
 dirty product repository. It does not land Glaze in BON, close physical-device
-review, or authorize merge, deployment, or publication. The disposable route
-must not be presented as shipped product integration.
+or owner review, or authorize merge, deployment, or publication. The
+disposable route must not be presented as shipped product integration.

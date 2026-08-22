@@ -123,6 +123,13 @@ which was altered or represented as a Glaze pass. Exact hashes, commands,
 boundaries, and caveats are recorded in the
 [BON Credit dogfood evidence](evidence/release/bon-credit-dogfood-2026-08-22.md).
 
+A test-only sibling route disabled only WebGL contexts before Glaze mounted.
+Host-executed Playwright WebKit verified effective `css-fallback`, renderer
+`fallback`, reason `webgl2-unavailable`, three semantic controls, successful
+interaction, HTTP `200`, and zero page/console errors. Normal and fallback
+full-page captures passed real-size engineering inspection. Neither capture
+substitutes for final owner review of the live routes.
+
 This closes the real-product compatibility/dogfood gate. It does not land a
 BON product change or replace final owner review.
 
