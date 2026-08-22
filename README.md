@@ -1,16 +1,13 @@
 # Glaze
 
-Glaze is a developer workbench and React library for designing, inspecting, and shipping clear glass UI without overstating what the browser can render.
+Glaze is a React and Next.js component system that gives semantic controls
+liquid-glass optics over explicitly owned React artwork, images, video, and
+canvas sources.
 
-The V1 workflow is intentionally small:
-
-1. render semantic React controls;
-2. tune one renderer-independent material model;
-3. inspect the same component on difficult backgrounds;
-4. see the requested capability, effective renderer, and fallback truth; and
-5. copy React or canonical material JSON into an application.
-
-> V1 is a local release candidate. `@glazelab/react` has not been published to npm yet.
+Status: `@glazelab/react@0.1.0-alpha.0` has an owner-accepted optical kernel,
+a frozen public API, and completed automated and macOS release gates. It is not
+published to npm. Physical iPhone/iPad review, final live owner review, and
+explicit release authorization remain required.
 
 ## Quick start
 
@@ -20,7 +17,9 @@ corepack pnpm build
 corepack pnpm dev
 ```
 
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000) to use the material workbench.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000) for the live material
+workbench. It tunes and exports the exact material used by the rendered
+components; there is no separate preview renderer.
 
 ## React usage
 
@@ -30,69 +29,110 @@ After the package is published:
 pnpm add @glazelab/react
 ```
 
-Import the explicit stylesheet once near the application root, then render a semantic component:
+Import the stylesheet once near the application root. Then place semantic
+controls over an explicitly owned source:
 
 ```tsx
-import { GlazeSegmentedControl } from "@glazelab/react";
+import {
+  GlazeRefractSource,
+  GlazeRoot,
+  GlazeSegmentedControl,
+} from "@glazelab/react";
 import "@glazelab/react/styles.css";
 
 export function PeriodControl() {
   return (
-    <GlazeSegmentedControl
-      aria-label="Report period"
-      defaultValue="week"
-      material="regular"
-      segments={[
-        { id: "day", label: "Day" },
-        { id: "week", label: "Week" },
-        { id: "month", label: "Month" },
-      ]}
-    />
+    <GlazeRoot>
+      <GlazeRefractSource
+        source={
+          <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+            <rect width="800" height="500" fill="#15334a" />
+            <circle cx="620" cy="80" r="240" fill="#d9588a" />
+          </svg>
+        }
+      >
+        <GlazeSegmentedControl
+          aria-label="Report period"
+          defaultValue="week"
+          segments={[
+            { id: "day", label: "Day" },
+            { id: "week", label: "Week" },
+            { id: "month", label: "Month" },
+          ]}
+        />
+      </GlazeRefractSource>
+    </GlazeRoot>
   );
 }
 ```
 
-For Next.js App Router, import the stylesheet from `app/layout.tsx`. A Server Component may render Glaze components with serializable props. Put callbacks and controlled state in a small Client Component.
+`GlazeRefractSource` accepts visual-only owned React decoration.
+`GlazeMediaSurface` accepts an explicit image, video, or canvas and shares one
+lazy WebGL renderer among every control lens on that surface. The semantic
+controls remain one authoritative DOM tree above the optical layer.
 
-## Honest capability model
+For Next.js App Router, import the stylesheet from `app/layout.tsx`. Layouts and
+pages may remain Server Components and pass serializable values or slots into
+the narrow Glaze client boundary. `@glazelab/react/material` is server-safe.
 
-| Capability | V1 behavior |
-|---|---|
-| `css` | Default and supported. Clear composited material; no refraction claim. |
-| `explicit-media` | Named but not enabled in the public V1 package. Falls back visibly to CSS. |
-| `owned-decoration` | Research only. Falls back visibly to CSS. |
-| `page-backdrop` | Unsupported. Glaze never captures or duplicates arbitrary page DOM. |
+See [`packages/react/README.md`](packages/react/README.md) for source contracts,
+media usage, the workbench, and the complete public surface.
 
-The public material describes intent—clarity, frost, tint, depth, edge light, angle, radius, and motion. Shader uniforms and renderer-specific values remain private so a saved material survives future renderer changes.
+## Capability truth
+
+| Capability | Behavior |
+| --- | --- |
+| `owned-decoration` | Refracts a developer-supplied, inert visual React source. |
+| `explicit-media` | Samples an explicit image, video, or canvas through one shared renderer per surface. |
+| `css-fallback` | Preserves semantic controls and reports why optics are unavailable. It is failure behavior, not the primary material. |
+
+Glaze does not capture arbitrary page DOM, infer page backdrops, duplicate
+interactive trees, promise cross-browser pixel identity, or claim Apple
+parity. Fallbacks are exposed through `GlazeDiagnostics` and surface data
+attributes instead of being silently presented as liquid glass.
 
 ## What ships in this repository
 
-- `packages/react`: the V1 public React package.
-- `apps/playground`: the five-scene material workbench.
-- `examples/react-vite`: a self-contained React/Vite consumer with twenty static surfaces.
-- `examples/next-app`: a self-contained Next.js `16.2.3` App Router consumer.
-- `tests/v1`: development and production browser gates across Chromium, Firefox, and Playwright WebKit.
-- `tests/consumers`: packed/linked consumer SSR, Strict Mode, keyboard, cleanup, and idle checks.
-- `packages/core`: retained renderer research; it is not the default V1 ordinary-DOM workflow.
+- `packages/react`: the frozen public React package and lazy optics/workbench
+  chunks;
+- `apps/playground`: the live workbench, accepted optical harness, component
+  proof, and public verification fixtures;
+- `examples/react-vite` and `examples/next-app`: tracked framework consumers;
+- `tests`: optical-kernel, component-system, public-API, mobile-preflight, and
+  installed-package coverage; and
+- `packages/core`: retained renderer research, not the public component path.
 
 ## Verification
 
 ```bash
-corepack pnpm quality:v1
+corepack pnpm build
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm size
+corepack pnpm test:unit
+corepack pnpm test:public-api
+corepack pnpm test:public-api:production
+corepack pnpm test:mobile-release
+corepack pnpm test:mobile-release:production
+corepack pnpm test:consumers
+corepack pnpm test:packed-consumers
 ```
 
-The gate builds every workspace package, checks types and package budgets, runs unit tests, exercises the workbench in development and production across three browser engines, verifies the tracked consumers, and installs fresh React 19, React 18, and Next.js consumers from the packed tarball outside the monorepo.
+The release evidence includes Chromium, Firefox, WebKit, React 18, React 19,
+Next.js 16, SSR/hydration, accessibility, DPR/resize, context recovery,
+origin-clean failures, renderer cleanup, and zero-idle-loop checks. Automated
+evidence cannot grant visual acceptance.
 
-Current package budgets are 8 KB brotli for the React entry, 2 KB brotli for the pure material entry, and 6 KB gzip for CSS. The current release candidate is substantially below all three.
+Read [`docs/RELEASE-READINESS.md`](docs/RELEASE-READINESS.md) for exact results
+and remaining gates, [`docs/PUBLIC-API.md`](docs/PUBLIC-API.md) for the frozen
+contract, and [`docs/RECOVERY.md`](docs/RECOVERY.md) for decision authority and
+stopping rules. The former CSS-first documents are retained as explicitly
+superseded engineering history only.
 
-## Boundaries
+## Release status
 
-Glaze V1 does not promise arbitrary DOM refraction, browser-renderer parity, canvas-replaced controls, or a broad component catalogue. CSS is the production baseline because it preserves real DOM, SSR, accessibility, and predictable idle cost. Explicit-source optical rendering remains a separate research capability.
-
-Read [the V1 release contract](docs/V1-RELEASE-CONTRACT.md), [the progress/evidence ledger](docs/V1-PROGRESS.md), and [the research mistake ledger](docs/RESEARCH-MISTAKE-LEDGER.md) before widening the product promise.
-
-## Status
-
-The code and simulator/browser evidence are release-candidate ready. Physical iPhone/iPad acceptance, npm publication, deployment, push, and merge remain explicit owner-controlled actions.
+The code is ready for physical-device and final owner review. Merge,
+deployment, and npm publication remain a **NO-GO** until those reviews pass and
+the owner explicitly authorizes each release action.
 
 License: MIT.
