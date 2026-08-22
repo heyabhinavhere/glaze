@@ -1,12 +1,12 @@
 # Glaze recovery ledger
 
-Date: 2026-08-20
+Date: 2026-08-22
 
 Active branch: `aj/glaze-optics-recovery`
 
-Active gate: final math-only displacement transplant
+Active gate: accepted optical kernel freeze
 
-Owner visual decision: **FINAL TRANSPLANT CANDIDATE PENDING**
+Owner visual decision: **ACCEPTED 2026-08-22**
 
 ## Product promise
 
@@ -14,6 +14,17 @@ Glaze is a React and Next.js component system for semantic controls with
 liquid-glass optics over explicitly owned visual sources. A later in-app
 developer workbench will tune and export the exact material used by those
 components.
+
+## Owner acceptance
+
+On 2026-08-22 the owner explicitly accepted the live, real-size
+`glaze-optical-map-transplant` material at commit `afc7112`. This closes the
+optical gate and authorizes component extraction under the unchanged-material
+rules below. It does not accept the legacy CSS renderer, broaden source
+ownership, or authorize arbitrary DOM capture.
+
+The tracked acceptance set and hashes live in
+`docs/evidence/optical-kernel/accepted-2026-08-22/`.
 
 ## Repository reset
 
@@ -27,7 +38,7 @@ components.
 - `aj/glaze-optics-recovery` starts at optical-kernel commit `17e47a5`. That
   commit is a harness baseline, not a visually accepted material.
 
-## Current candidate
+## Accepted optical kernel
 
 The owner rejected `glaze-optical-map-r1` on 2026-08-18 because the material,
 especially the moving selection lens, was almost invisible at real size. The
@@ -47,7 +58,7 @@ lighting instead of coherent refraction. Sampling the page scene through both
 the outer track and inner lens produced competing nested shapes. Passing pixel
 delta thresholds did not make the material convincing.
 
-`glaze-optical-map-transplant` is the final permitted experiment. Its
+`glaze-optical-map-transplant` is the accepted kernel. Its
 spherical-cap normalization and inward meniscus math are adapted from the
 MIT-licensed `samasante/liquid-glass` implementation at commit
 `4e7b769e1df7e5a7d3669fef22417fe3d2f79ade`; the required notice is preserved
@@ -86,23 +97,31 @@ library's React tree or lifecycle was imported.
 - “Better”, “improved”, passing tests, or an agent/orchestrator judgment do not
   unlock component extraction.
 
-## Frozen work
+## Unlocked work and remaining freezes
 
-Until the owner accepts the optical kernel, do not:
+Component extraction is now authorized in this order:
 
-- change the public material schema;
-- build or expand the workbench;
-- add switch, slider, video, or DOM-source adapters;
-- publish, deploy, merge, or reopen a release PR; or
-- restore arbitrary DOM capture, `html2canvas`, automatic source detection,
-  or CSS glassmorphism as the primary renderer.
+1. port the accepted kernel into the validated React foundation;
+2. prove owned decoration and explicit media across segmented control, switch,
+   slider, and one live video or canvas source without changing the material;
+3. freeze the public API only after that proof passes; and
+4. build the workbench against the exact live material only after the API is
+   frozen.
 
-## Stop rule
+Until the multi-component proof passes, do not change the public material
+schema, expand the workbench, publish, deploy, merge a release PR, or introduce
+component-specific optical patches. Arbitrary DOM capture, `html2canvas`,
+automatic source detection, and CSS glassmorphism as the primary renderer
+remain permanently rejected.
+
+## Optical freeze rule
 
 Candidate 1 used both bounded owner-directed revisions and failed owner review.
-The license-verified, math-only displacement transplant is the final candidate.
-If it fails owner review, record a product `NO-GO`; do not tune another shader,
-retreat to decorative CSS, or widen the capture problem.
+The license-verified, math-only displacement transplant then passed owner
+review. Its displacement equations, material constants, map contract, and
+composite behavior are frozen during component extraction. A mechanical bug
+may be fixed with regression evidence; aesthetic retuning requires reopening
+the owner gate explicitly.
 
 ## Verification commands
 

@@ -1,8 +1,8 @@
 # Glaze rendering architecture
 
-Date: 2026-08-17
+Date: 2026-08-22
 
-Status: component-first boundary accepted; optical fidelity pending owner review
+Status: component-first boundary and optical kernel accepted
 
 ## Decision
 
@@ -14,11 +14,13 @@ Glaze does not inspect, infer, rasterize, screenshot, serialize, or transmit
 arbitrary page DOM. Mode C, `html2canvas`, hidden duplicate substrates, and
 automatic backdrop discovery are rejected product paths.
 
-No earlier M1, M1.1, M2, CSS V1, or optical-kernel treatment is an accepted
-visual reference. Their lifecycle, source, semantic, package, and testing work
-may be reused only when it does not carry forward a rejected material claim.
+No earlier M1, M1.1, M2, CSS V1, or hand-tuned optical-kernel treatment is an
+accepted visual reference. The accepted exception is the final
+`glaze-optical-map-transplant` at `afc7112`. Earlier lifecycle, source,
+semantic, package, and testing work may be reused only when it does not carry
+forward a rejected material claim.
 
-## Current optical gate
+## Accepted optical kernel
 
 The private `/optical-kernel` route owns one Canvas 2D source and produces two
 deterministic displacement maps:
@@ -47,9 +49,9 @@ wash, uniform outline, double contour, CSS glow, or scene-specific tuning.
 
 | Capability | Input | Renderer | Semantic contract | Current status |
 | --- | --- | --- | --- | --- |
-| Optical kernel | Owned Canvas 2D fixture | Separate GPU track/selection maps | One DOM radiogroup above output | Candidate; owner decision pending |
-| Owned decoration | Visual-only, inert React layer | Future SVG displacement adapter | No interactive or identified duplicate content | Frozen |
-| Explicit media | Origin-clean image, video, or canvas | Future shared WebGL source with multiple lenses | Controls remain DOM | Frozen |
+| Optical kernel | Owned Canvas 2D fixture | Separate GPU track/selection maps | One DOM radiogroup above output | Accepted 2026-08-22 |
+| Owned decoration | Visual-only, inert React layer | Accepted kernel over owned pixels | No interactive or identified duplicate content | Extraction authorized |
+| Explicit media | Origin-clean image, video, or canvas | Shared WebGL source with multiple lenses | Controls remain DOM | Extraction authorized |
 | CSS fallback | No sampleable source required | Legible non-optical CSS surface | Full semantics preserved | Retained |
 | Arbitrary page backdrop | Surrounding live DOM | None | Unsupported | Rejected |
 
@@ -78,8 +80,9 @@ is requested; the pure material entry must remain server-safe.
 ## Acceptance authority
 
 Automation validates map contracts, source ownership, semantics, lifecycle,
-fallback, bounds, and regression metrics. It cannot certify beauty. Only
-explicit owner approval of full-viewport, real-size evidence can unlock source
-adapters, component extraction, public API design, or workbench work.
+fallback, bounds, and regression metrics. It cannot certify beauty. The owner
+explicitly accepted the live, full-scale kernel on 2026-08-22, unlocking source
+adapters and component extraction. Public API design and workbench work remain
+blocked until the unchanged material passes the multi-component proof.
 
 The authoritative status and stop rule live in `docs/RECOVERY.md`.

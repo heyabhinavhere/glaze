@@ -1,46 +1,47 @@
 # Glaze — current project state
 
-Date: 2026-08-17
+Date: 2026-08-22
 
 Product line: `aj/glaze-optics-recovery`
 
-Status: **optical recovery candidate; owner visual acceptance pending**
+Status: **optical kernel accepted; component-system extraction authorized**
 
 ## Product target
 
 Glaze is a React and Next.js component system that gives semantic controls
 convincing liquid-glass optics over explicitly owned visual sources. After the
-optical material is accepted, an in-app developer workbench will tune and
-export that same live material.
+accepted material passes the multi-component proof, an in-app developer
+workbench will tune and export that same live material.
 
 The product does not promise arbitrary page capture, automatic backdrop
 inference, cross-browser pixel identity, or Apple parity.
 
 ## Current authorized slice
 
-Only `/optical-kernel` is active product work:
+`/optical-kernel` is the accepted renderer proof:
 
 - one component-owned Canvas 2D source at a time;
 - one real-size `320 x 64` segmented control;
 - separate stable-track and moving-selection displacement maps;
 - semantic DOM buttons above one transparent WebGL2 output;
 - explicit CSS fallback when optical rendering is unavailable; and
-- full-scale owner review before any extraction or generalization.
+- explicit owner acceptance at full scale on 2026-08-22.
 
-The current map contract is `glaze-optical-map-r1`: R/G encode source
+The accepted map contract is `glaze-optical-map-transplant`: R/G encode source
 displacement, B encodes thickness, and A encodes coverage. The renderer is
 demand-driven and stops once the source and spring are idle.
 
 ## Truthful current state
 
-- No Glaze optical material has owner visual acceptance.
+- The final optical transplant at `afc7112` has owner visual acceptance.
 - M1, M1.1, and M2 remain mechanics and architecture evidence only.
 - The CSS-first V1 passed engineering checks but failed the liquid-glass
   product gate. Draft PR #6 is closed.
 - The rejected M2 visual reset is preserved at `aj/glaze-visual-reset`
   commit `371a110` and cannot re-enter the product path.
-- The public React API, workbench, publication, deployment, and release work
-  are frozen until the optical gate passes.
+- Component extraction is authorized. The public API and workbench remain
+  frozen until the unchanged material passes the multi-component proof;
+  publication, deployment, and release remain later gates.
 
 The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 
@@ -63,7 +64,7 @@ The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 
 ## Gate order
 
-1. Owner accepts one real-size optical kernel.
+1. **Complete:** owner accepts one real-size optical kernel.
 2. The unchanged material proves segmented control, switch, and slider across
    owned decoration and explicit media.
 3. The serializable public material/API is frozen.

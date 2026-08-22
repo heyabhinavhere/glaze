@@ -1,8 +1,8 @@
 # Optical kernel acceptance gate
 
-Date: 2026-08-20
+Date: 2026-08-22
 
-Status: final math-only transplant; owner visual acceptance pending
+Status: **ACCEPTED BY OWNER 2026-08-22**
 
 ## Purpose
 
@@ -89,6 +89,10 @@ These checks may reject mechanics. Passing them does not accept the material.
 
 ## Owner visual gate
 
+The owner explicitly accepted the live, real-size final transplant on
+2026-08-22. The accepted evidence and implementation hashes are tracked under
+`docs/evidence/optical-kernel/accepted-2026-08-22/`.
+
 Primary evidence is a full viewport at 1x plus a same-scale reference. A
 real-size crop and motion frames are supporting evidence only.
 
@@ -105,12 +109,9 @@ following:
 
 “Better”, “improved”, passing tests, or agent approval do not count.
 
-## Stop rule
+## Post-acceptance rule
 
-Do not change the public schema, add source adapters/components, build the
-workbench, publish, deploy, merge, or reopen a release PR before owner visual
-acceptance.
-
-The hand-tuned candidate used both bounded owner-directed revisions and failed.
-This final math-only transplant is the only remaining candidate. If it fails
-owner review, record a product `NO-GO`; do not start another shader direction.
+Component extraction and the two authorized source adapters may now begin.
+The accepted optics remain frozen. Public-schema and workbench work stay
+blocked until the unchanged material passes the segmented-control, switch,
+slider, and live-media proof. Publication and release remain separately gated.

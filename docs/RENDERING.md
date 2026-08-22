@@ -1,4 +1,11 @@
-# Glass rendering — current pipeline + the failed paths
+# Historical CSS/V1 rendering pipeline and failed paths
+
+> **Archived implementation note.** This file documents the rejected CSS-first
+> V1 and its earlier renderer experiments. It is not the current product
+> architecture and must not guide new optical work. The authoritative product
+> boundary is `docs/architecture/RENDERING-REFRAME.md`; the accepted optical
+> kernel is recorded in `docs/gates/OPTICAL-KERNEL-REPORT.md` and frozen under
+> `docs/evidence/optical-kernel/accepted-2026-08-22/`.
 
 The glass effect is rendered entirely in WebGL. The DOM panel is a transparent
 anchor for positioning + content; the visible glass is a `<canvas>` overlay on

@@ -1,0 +1,14 @@
+28a0a5a5109222a9ab00c7dfcff3e3bf74cc9a1de1b023c605da59b410a28930  docs/evidence/optical-kernel/accepted-2026-08-22/compact.png
+06a3f3edcb38a4f0edf42df8002fdee4970f2abbb2f10e44aa629ca67e654344  docs/evidence/optical-kernel/accepted-2026-08-22/desktop.png
+5c9c20a44088b5a620e1e9d7b5f4bed057ede081d812deaf81c8675e4983f214  docs/evidence/optical-kernel/accepted-2026-08-22/motion-00-rest.png
+444eac7b74d818fa56b293bea7939a888de819196dfa65b96a4dba630be76e26  docs/evidence/optical-kernel/accepted-2026-08-22/motion-01-departure.png
+1694eabeb039f9fd0dc695c0f0fb62ac73d18ab47d02b605fc15023c4b2d824d  docs/evidence/optical-kernel/accepted-2026-08-22/motion-02-travel.png
+c709a1b3a0f575839c171b0dc7d65fa1a6e2942785b70eb0fc4eb45062f7f13d  docs/evidence/optical-kernel/accepted-2026-08-22/motion-03-settled.png
+afb82c4ae070e33cbf32950cabb800992bde55d19da0cfea2dce3b47acc0776c  docs/evidence/optical-kernel/accepted-2026-08-22/scene-architecture.png
+ae8b3d1f6a9a8945888b758d921786e0be21f765eb7f789c70db5b3ecf582add  docs/evidence/optical-kernel/accepted-2026-08-22/scene-color.png
+edefb1069560e97b98d196b3ea9db447e95b68868770e9870cee8d2eb5ae3cf3  docs/evidence/optical-kernel/accepted-2026-08-22/scene-dark.png
+06a3f3edcb38a4f0edf42df8002fdee4970f2abbb2f10e44aa629ca67e654344  docs/evidence/optical-kernel/accepted-2026-08-22/scene-reference.png
+ce011f4efc2092e7c41e4cff7d55336d0925049dc54d6f27b34e749b20ce9aaf  apps/playground/app/optical-kernel/_lib/optical-map.ts
+b537b013150940e7f90e89f6087357440b4b6f1df2ad03c2ec193c5aa9a10287  apps/playground/app/optical-kernel/_lib/optical-kernel-renderer.ts
+bab1007a225777c39042d857642acf1e9709b6aafdc2104f6cbee4e377a16674  apps/playground/app/optical-kernel/_components/OpticalKernelExperiment.tsx
+1ce04c326c6fe681cd31a90566eabc636750f442d83d69149d7f49e9e9c78c92  apps/playground/app/optical-kernel/optical-kernel.module.css

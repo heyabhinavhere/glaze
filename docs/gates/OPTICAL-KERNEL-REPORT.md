@@ -1,6 +1,6 @@
 # Optical kernel recovery report
 
-Date: 2026-08-20
+Date: 2026-08-22
 
 Branch: `aj/glaze-optics-recovery`
 
@@ -10,11 +10,13 @@ Map contract: `glaze-optical-map-transplant`
 
 ## Verdict
 
-**FINAL MATH-ONLY TRANSPLANT. MECHANICS PASS. OWNER VISUAL ACCEPTANCE PENDING.**
+**FINAL MATH-ONLY TRANSPLANT. MECHANICS PASS. OWNER VISUAL ACCEPTANCE PASS.**
 
-Product extraction, public API, workbench, merge, deployment, and release
-remain blocked. The earlier hand-tuned shader failed owner review even though
-its checks passed; no automated result in this report grants acceptance.
+The owner explicitly accepted the live, real-size transplant on 2026-08-22.
+Component extraction is authorized under the frozen-material constraints.
+Public API, workbench, merge, deployment, and release remain separately gated.
+The earlier hand-tuned shader failed owner review even though its checks
+passed; no automated result in this report granted acceptance.
 
 ## Rejection that triggered the transplant
 
@@ -75,31 +77,33 @@ bounded rendering. They do not establish aesthetic acceptance.
 
 ## Owner review evidence
 
-Generated evidence is ignored by Git and lives under
-`.gstack/evidence/optical-kernel/`:
+Regenerable evidence is ignored by Git and lives under
+`.gstack/evidence/optical-kernel/`. The accepted Chromium evidence and hashes
+are tracked under `docs/evidence/optical-kernel/accepted-2026-08-22/`:
 
 - full 1280×720 captures for the reference, architecture, color, and dark scenes;
 - compact 390×844 captures;
 - rest, departure, travel, and settled motion samples; and
-- `review/reference-vs-transplant-real-size.png`, with the supplied reference
-  and transplant control side by side at the same authored scale.
+- SHA-256 hashes for the tracked images and accepted optical source files.
 
-The reference is user-provided external evidence and is not copied into the
-distributable package.
+The original reference and generated side-by-side board were lost with the
+temporary worktree and are not reconstructed. The owner accepted the live
+implementation directly.
 
 ## Boundaries still open
 
-- Owner visual acceptance is not inferred or recorded.
+- Owner visual acceptance is recorded; no broader component or release
+  acceptance is inferred from it.
 - Physical iPhone/iPad and native Safari performance are not tested.
 - The proof remains one Canvas 2D scene plus one visual-only decoration source;
-  public owned-decoration and explicit-media adapters remain frozen.
+  public owned-decoration and explicit-media adapters are not yet built.
 - Context restoration fails closed and requires remount.
 - Material values remain private candidate constants, not a public schema.
 - The three-option segmented control is the only authorized geometry.
 
-## Next decision
+## Next phase
 
-The only next decision is owner review of the live/full-scale transplant. If it
-is accepted, component extraction may begin from the validated foundation. If
-it is rejected, record a product `NO-GO`; do not begin another shader or
-renderer direction.
+Create the component-system branch from the validated React foundation at
+`17c4fd4`, port only the accepted kernel and required lifecycle infrastructure,
+and prove the unchanged material across segmented control, switch, slider, and
+one live video or canvas source before freezing the public API.
