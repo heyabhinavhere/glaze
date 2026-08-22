@@ -6,7 +6,7 @@ Accepted recovery branch: `aj/glaze-optics-recovery` at `162c1cb`
 
 Active product branch: `aj/glaze-component-system`
 
-Active gate: physical-device, VoiceOver, dogfood, and final owner release review
+Active gate: physical-device, dogfood, and final owner release review
 
 Owner visual decision: **ACCEPTED 2026-08-22**
 
@@ -114,11 +114,12 @@ The public contract and exact-material workbench now pass development and
 optimized-production matrices in Chromium, Firefox, and WebKit. Packed React
 18, React 19, and Next.js 16 consumers also pass from the installed tarball.
 Real-scale review of the optimized build passes in actual macOS Chrome and
-Safari. Physical iPhone/iPad, VoiceOver, real-product Next.js dogfood, final
-live owner review, publication, deployment, release PRs, and component-specific
-optical patches remain blocked. Arbitrary DOM capture, `html2canvas`, automatic
-source detection, and CSS glassmorphism as the primary renderer remain
-permanently rejected.
+Safari. Actual macOS VoiceOver and Safari also pass against an optimized
+Next.js 16 consumer installed from the package tarball. Physical iPhone/iPad,
+real-product Next.js dogfood, final live owner review, publication, deployment,
+release PRs, and component-specific optical patches remain blocked. Arbitrary
+DOM capture, `html2canvas`, automatic source detection, and CSS glassmorphism
+as the primary renderer remain permanently rejected.
 
 ## Public API and workbench proof
 
@@ -191,6 +192,7 @@ corepack pnpm test:mobile-release
 corepack pnpm test:mobile-release:production
 corepack pnpm test:consumers
 corepack pnpm test:packed-consumers
+corepack pnpm test:packed-consumers:retain
 corepack pnpm --filter @glazelab/react size
 corepack pnpm --filter playground typecheck
 corepack pnpm --filter playground lint

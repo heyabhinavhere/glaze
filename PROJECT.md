@@ -63,9 +63,11 @@ demand-driven and stops once the source and spring are idle.
   installed tarball rather than a workspace link.
 - The optimized production build passed real-scale interaction review in
   actual macOS Chrome and Safari.
-- Physical iPhone/iPad, VoiceOver, real-product Next.js dogfood, final live
-  owner review, publication, deployment, and merge remain owner-controlled
-  release gates.
+- Actual macOS VoiceOver and Safari pass on an optimized retained Next.js 16
+  consumer installed from the package tarball; semantics and keyboard state
+  changes were verified and restored.
+- Physical iPhone/iPad, real-product Next.js dogfood, final live owner review,
+  publication, deployment, and merge remain owner-controlled release gates.
 
 The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 The exact automated/manual split lives in `docs/RELEASE-READINESS.md`.
@@ -95,8 +97,8 @@ The exact automated/manual split lives in `docs/RELEASE-READINESS.md`.
 3. **Complete:** the serializable public material/API is frozen.
 4. **Complete:** the workbench is connected to the exact runtime material.
 5. **Active:** automated repository and packed-consumer gates are complete;
-   physical-device, VoiceOver, real-product dogfood, final owner review, and
-   release authorization remain before merge or publication.
+   physical-device, real-product dogfood, final owner review, and release
+   authorization remain before merge or publication.
 
 No later gate may begin early.
 
@@ -115,6 +117,7 @@ corepack pnpm test:mobile-release
 corepack pnpm test:mobile-release:production
 corepack pnpm test:consumers
 corepack pnpm test:packed-consumers
+corepack pnpm test:packed-consumers:retain
 corepack pnpm --filter @glazelab/react size
 corepack pnpm --filter playground typecheck
 corepack pnpm --filter playground lint

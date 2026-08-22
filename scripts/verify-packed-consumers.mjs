@@ -16,6 +16,7 @@ const packageRoot = join(repositoryRoot, "packages/react");
 const packageManifest = JSON.parse(
   await readFile(join(packageRoot, "package.json"), "utf8"),
 );
+const retainOnSuccess = process.argv.includes("--retain");
 const scratch = await mkdtemp(join(tmpdir(), "glaze-packed-consumers-"));
 const tarball = join(
   scratch,
@@ -119,7 +120,11 @@ try {
     { V1_PACKED_CONSUMER_ROOT: scratch },
   );
 
-  await rm(scratch, { recursive: true });
+  if (retainOnSuccess) {
+    console.log(`Packed-consumer evidence retained at ${scratch}`);
+  } else {
+    await rm(scratch, { recursive: true });
+  }
   console.log("Packed React, React 18, and Next consumers verified.");
 } catch (error) {
   console.error(`Packed-consumer evidence retained at ${scratch}`);
