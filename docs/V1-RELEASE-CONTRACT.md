@@ -1,5 +1,11 @@
 # Glaze V1 release contract
 
+> **Superseded product status — 2026-08-17:** This contract remains useful as
+> a record of the semantic CSS fallback and package engineering, but its
+> CSS-first material failed the liquid-glass product gate. Draft PR #6 was
+> closed and this contract is not an active release authorization. See
+> `docs/RECOVERY.md`.
+
 Date: 2026-08-13
 
 Status: active implementation contract

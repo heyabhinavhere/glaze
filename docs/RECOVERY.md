@@ -1,0 +1,137 @@
+# Glaze recovery ledger
+
+Date: 2026-08-22
+
+Accepted recovery branch: `aj/glaze-optics-recovery` at `162c1cb`
+
+Active product branch: `aj/glaze-component-system`
+
+Active gate: component-system extraction with frozen optics
+
+Owner visual decision: **ACCEPTED 2026-08-22**
+
+## Product promise
+
+Glaze is a React and Next.js component system for semantic controls with
+liquid-glass optics over explicitly owned visual sources. A later in-app
+developer workbench will tune and export the exact material used by those
+components.
+
+## Owner acceptance
+
+On 2026-08-22 the owner explicitly accepted the live, real-size
+`glaze-optical-map-transplant` material at commit `afc7112`. This closes the
+optical gate and authorizes component extraction under the unchanged-material
+rules below. It does not accept the legacy CSS renderer, broaden source
+ownership, or authorize arbitrary DOM capture.
+
+The tracked acceptance set and hashes live in
+`docs/evidence/optical-kernel/accepted-2026-08-22/`.
+
+## Repository reset
+
+- `aj/glaze-visual-reset` commit `371a110` preserves the rejected M2
+  multi-lens candidate and its `VISUAL NO-GO` evidence. It is archival and may
+  not be merged into the product path.
+- Draft PR #6, the CSS-first V1 release candidate, was closed on 2026-08-17.
+  Its semantic React components, fallback behavior, diagnostics, and packed
+  consumer checks remain useful scaffolding; its CSS material is not the
+  product renderer.
+- `aj/glaze-optics-recovery` starts at optical-kernel commit `17e47a5`. That
+  commit is a harness baseline, not a visually accepted material.
+
+## Accepted optical kernel
+
+The owner rejected `glaze-optical-map-r1` on 2026-08-18 because the material,
+especially the moving selection lens, was almost invisible at real size. The
+runtime and renderer were healthy. Pixel and shader inspection showed that
+the track and selection used nearly identical transmission while highlight
+and occlusion energy were restricted to a narrow edge.
+
+The owner rejected `glaze-optical-map-r2` on 2026-08-19 because it was still
+almost invisible at real size. Revision 1 improved source-pixel deltas but
+still depended on background detail and a directional edge to communicate
+the selected body. That numeric improvement did not satisfy the visual gate.
+
+The owner rejected `glaze-optical-map-r3` on 2026-08-20 because it was still
+effectively invisible at real size and contained additional visual mistakes.
+The selected body was communicated by cyan absorption and broad synthetic
+lighting instead of coherent refraction. Sampling the page scene through both
+the outer track and inner lens produced competing nested shapes. Passing pixel
+delta thresholds did not make the material convincing.
+
+`glaze-optical-map-transplant` is the accepted kernel. Its
+spherical-cap normalization and inward meniscus math are adapted from the
+MIT-licensed `samasante/liquid-glass` implementation at commit
+`4e7b769e1df7e5a7d3669fef22417fe3d2f79ade`; the required notice is preserved
+in `THIRD_PARTY_NOTICES.md`.
+
+The transplant retains Glaze's semantic DOM, renderer ownership, spring,
+diagnostics, context handling, zero-idle scheduling, and RGBA contract. It
+renders one `320 x 64` segmented control from one owned Canvas 2D scene and one
+small visual-only decoration canvas. The decoration contains no labels, IDs,
+forms, events, or interactive content. Two deterministic GPU maps remain:
+
+1. a stable track map; and
+2. one continuous moving selection map.
+
+Each map stores horizontal displacement, vertical displacement, thickness,
+and coverage. The stable track supplies the only visible outer meniscus. The
+selection map is thickness-weighted into that body as a moving refractive
+bulge, so it does not draw a second pill or contour. The composite uses fixed
+neutral transmission, restrained chromatic dispersion, a directional
+highlight, and opposing occlusion. It emits premultiplied output and leaves the
+single authoritative DOM label tree above the optical layer.
+
+The same private material constants run on all four scenes and all three
+states. The rejected cyan absorption, hard inner oval, page-specific values,
+CSS finish, and aesthetic source-pixel ratio gates are absent. No other
+library's React tree or lifecycle was imported.
+
+## Gate authority
+
+- Automated checks can reject broken mechanics. They cannot accept visual
+  quality.
+- Full-viewport, 1x, real-size evidence is primary. Crops and pixel metrics
+  are supporting diagnostics only.
+- Only an explicit owner decision can change `Owner visual decision` to
+  `ACCEPTED`.
+- “Better”, “improved”, passing tests, or an agent/orchestrator judgment do not
+  unlock component extraction.
+
+## Unlocked work and remaining freezes
+
+Component extraction is now authorized in this order:
+
+1. port the accepted kernel into the validated React foundation;
+2. prove owned decoration and explicit media across segmented control, switch,
+   slider, and one live video or canvas source without changing the material;
+3. freeze the public API only after that proof passes; and
+4. build the workbench against the exact live material only after the API is
+   frozen.
+
+Until the multi-component proof passes, do not change the public material
+schema, expand the workbench, publish, deploy, merge a release PR, or introduce
+component-specific optical patches. Arbitrary DOM capture, `html2canvas`,
+automatic source detection, and CSS glassmorphism as the primary renderer
+remain permanently rejected.
+
+## Optical freeze rule
+
+Candidate 1 used both bounded owner-directed revisions and failed owner review.
+The license-verified, math-only displacement transplant then passed owner
+review. Its displacement equations, material constants, map contract, and
+composite behavior are frozen during component extraction. A mechanical bug
+may be fixed with regression evidence; aesthetic retuning requires reopening
+the owner gate explicitly.
+
+## Verification commands
+
+```bash
+corepack pnpm test:optical-kernel:unit
+corepack pnpm test:optical-kernel
+corepack pnpm test:optical-kernel:production
+corepack pnpm --filter playground typecheck
+corepack pnpm --filter playground lint
+corepack pnpm --filter playground build
+```

@@ -1,101 +1,88 @@
-# Glaze rendering reframe
+# Glaze rendering architecture
 
-Date: 2026-08-12
-Decision source: M1.1 Stage B NO-GO
-Status: architecture accepted; M2 explicit-video Next.js slice accepted
+Date: 2026-08-22
+
+Status: component-first boundary and optical kernel accepted
 
 ## Decision
 
-Glaze has explicit capability tiers. It does not promise one renderer, one pixel result, or one physical material across WebGL and browser backdrop composition.
+Glaze renders liquid-glass components only over visual sources explicitly
+owned by the component. Semantic controls remain authoritative DOM above the
+decorative renderer.
 
-The accepted high-fidelity path is the M1.1 Stage A WebGL material for explicit image, video, and canvas sources that Glaze owns. Semantic DOM remains real DOM above or beside that visual layer. A future browser-native backdrop path may be researched under a separate contract and visibly different fidelity claim. It must never be called the same renderer or a parity implementation.
+Glaze does not inspect, infer, rasterize, screenshot, serialize, or transmit
+arbitrary page DOM. Mode C, `html2canvas`, hidden duplicate substrates, and
+automatic backdrop discovery are rejected product paths.
 
-## Accepted implementation status
+No earlier M1, M1.1, M2, CSS V1, or hand-tuned optical-kernel treatment is an
+accepted visual reference. The accepted exception is the final
+`glaze-optical-map-transplant` at `afc7112`. Earlier lifecycle, source,
+semantic, package, and testing work may be reused only when it does not carry
+forward a rejected material claim.
 
-The owner/orchestrator accepted this reframe and authorized one M2 source class: explicit same-origin `HTMLVideoElement` rendered by the locked WebGL material, with ordinary semantic DOM controls layered separately. The private `/m2/video` Next.js App Router fixture now proves that slice and is accepted in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`.
+## Accepted optical kernel
 
-This does not accept an image or canvas Next.js integration slice, a public API, a cross-renderer schema, a CSS/backdrop renderer, Mode C, or the workbench. Those remain separate capability decisions requiring explicit authorization and evidence.
+The private `/optical-kernel` route owns one Canvas 2D source and produces two
+deterministic displacement maps:
 
-## Capability matrix
+```text
+owned source pixels
+      |
+      +--> stable track map --------+
+      |                             |
+      +--> moving selection map ----+--> one premultiplied WebGL composite
+                                           |
+                                           +--> semantic DOM labels above
+```
 
-| Capability | Input and ownership | Rendering contract | Semantic content | Support and fallback | Fidelity claim |
-|---|---|---|---|---|---|
-| Explicit-source WebGL | An origin-clean image, video, or canvas supplied explicitly and owned for sampling by the component | Accepted `m1.1-continuous-capsule-lighting-r1` field with private `m1-transport-controls` material | Controls and labels remain ordinary DOM overlays; WebGL never owns their semantics | Requires WebGL2 and an uploadable source; context loss, unsupported hardware, or unsafe source falls back explicitly | High-fidelity Glaze reference for this source class only |
-| Semantic DOM overlay | Application-owned HTML controls and content | No optical rendering; normal browser layout and paint | Fully selectable, focusable, interactive, and assistive-technology visible | Works wherever the application DOM works | No glass or refraction claim |
-| Future CSS/backdrop capability | Browser-composited pixels behind a declared element boundary; no copied or captured DOM | Separate browser-native backdrop/CSS contract with its own support matrix and values | Real DOM remains real DOM | Must feature-detect, disclose unsupported states, and choose an explicit fallback | Browser-native backdrop effect; never WebGL parity or the same material |
-| Accessibility and unsupported fallback | No sampled source required | Opaque or translucent legible CSS surface with no refraction claim | Full semantic DOM | Used for forced colors, reduced transparency, unavailable/lost WebGL, unsafe sources, and explicit developer fallback | Legibility and state continuity only |
+Both maps use the same channel contract: R/G displacement, B thickness, A
+coverage. Track and selection are separate surfaces; they are not joined with
+a maximum-height union. The selection remains one continuous, velocity-shaped
+lens rather than leading/trailing lobes.
 
-## Source ownership, security, and privacy
+The composite pass preserves source detail, derives normals and directional
+lighting from thickness, allows one non-uniform optical rim, adds opposing
+occlusion, and emits premultiplied RGB. It must not introduce a gray volume
+wash, uniform outline, double contour, CSS glow, or scene-specific tuning.
 
-- WebGL accepts only an explicit `HTMLImageElement`, `HTMLVideoElement`, or `HTMLCanvasElement` source boundary that the component is authorized to sample. It never discovers page content automatically.
-- The source must be origin-clean. A failed or security-restricted texture upload becomes an explicit fallback reason; it is never hidden as a successful glass renderer.
-- Glaze does not inspect, serialize, duplicate, rasterize, screenshot, or transmit arbitrary DOM. `html2canvas`, screenshot textures, hidden duplicate substrates, and automatic page capture are prohibited.
-- Semantic controls and sensitive text remain in the application DOM and are not copied into renderer buffers. Applications retain responsibility for media authorization, CORS configuration, provenance, and disposal.
+## Capability boundary
 
-## React and Next.js consumption
+| Capability | Input | Renderer | Semantic contract | Current status |
+| --- | --- | --- | --- | --- |
+| Optical kernel | Owned Canvas 2D fixture | Separate GPU track/selection maps | One DOM radiogroup above output | Accepted 2026-08-22 |
+| Owned decoration | Visual-only, inert React layer | Accepted kernel over owned pixels | No interactive or identified duplicate content | Extraction authorized |
+| Explicit media | Origin-clean image, video, or canvas | Shared WebGL source with multiple lenses | Controls remain DOM | Extraction authorized |
+| CSS fallback | No sampleable source required | Legible non-optical CSS surface | Full semantics preserved | Retained |
+| Arbitrary page backdrop | Surrounding live DOM | None | Unsupported | Rejected |
 
-The route or product shell remains a Server Component where possible. The interactive renderer is a narrow Client Component receiving serializable private configuration and explicit source ownership. Browser APIs, observers, WebGL context creation, media callbacks, and teardown run only after hydration in effects.
+Unsupported, unsafe, forced-color, reduced-transparency, or context-loss states
+must expose a reason and preserve the same semantic control. A fallback may
+not be described as optical fidelity.
 
-Server output must contain the semantic control and an honest fallback state. Hydration may replace only the decorative visual layer after capability and source checks; it must not replace, duplicate, or reorder the semantic control. A renderer failure after hydration returns to the same explicit fallback without losing focus or control state.
+## React and Next.js boundary
 
-This M1 research material is not a frozen public React API or schema. Any future wrapper must preserve the explicit-source boundary rather than infer or capture surrounding content.
+Pages and layouts remain Server Components. The optical experiment is a
+narrow Client Component because it owns state, events, Canvas, WebGL, browser
+media queries, and teardown. Any later public material object must stay plain
+and serializable. Renderer code must be lazy-loaded when the optical capability
+is requested; the pure material entry must remain server-safe.
 
-## Accessibility behavior
+## Lifecycle requirements
 
-- Controls use native DOM semantics, keyboard behavior, focus, names, and state independently of the visual renderer.
-- Reduced motion keeps the semantic interaction but removes nonessential geometry motion and continuous animation; renderer work remains demand-driven.
-- Reduced transparency and forced colors expose a legible CSS surface and hide decorative renderer output. They do not pretend to preserve optical fidelity.
-- Renderer loss, unsupported hardware, or unsafe media cannot make text, controls, or status disappear.
-- Contrast and target-size requirements belong to the semantic overlay and are tested independently of the sampled source.
+- Static sources upload only when initially drawn, resized, or changed.
+- Spring animation schedules bounded frames and stops when settled.
+- Video will use presented-frame callbacks rather than a permanent RAF.
+- DPR is capped at 2 and resize/zero-size transitions remain recoverable.
+- Context loss and unsafe uploads fail closed to the semantic fallback.
+- Every texture, framebuffer, buffer, program, observer, callback, and listener
+  is released by its owner.
 
-## Performance and lifecycle responsibilities
+## Acceptance authority
 
-- Static and paused sources render only until settled. Video uses presented-frame callbacks when available and uploads only changed frames.
-- Rendering pauses when hidden or offscreen. Interaction schedules bounded redraws rather than creating a permanent animation loop.
-- Output resolution follows element size, caps device pixel ratio at 2, and recovers from zero-size and resize transitions.
-- Every renderer owns and releases its textures, buffers, programs, observers, media callbacks, event listeners, and context-loss handlers.
-- Context loss and upload failures are observable and transition to the explicit fallback. No blank or silent renderer is an acceptable state.
-- Performance evidence is recorded by engine and environment; Playwright WebKit is automation evidence, not a Safari or iOS support claim.
+Automation validates map contracts, source ownership, semantics, lifecycle,
+fallback, bounds, and regression metrics. It cannot certify beauty. The owner
+explicitly accepted the live, full-scale kernel on 2026-08-22, unlocking source
+adapters and component extraction. Public API design and workbench work remain
+blocked until the unchanged material passes the multi-component proof.
 
-## What may be shared
-
-The workbench may share semantic intent: geometry role, clarity/frost intent, tint intent, light direction, interaction energy, accessibility policy, and named quality levels. It may also share test vocabulary and units when engines implement those meanings honestly.
-
-Renderer implementation values, compositing equations, sampling constraints, rasterization, and support behavior are capability-specific. A CSS/backdrop implementation may therefore require its own validated parameterization. The UI must expose that difference instead of silently mapping one renderer's constants onto another or claiming pixel/material identity.
-
-## DialKit-like workflow implications
-
-A future developer workbench may preview one semantic material model across the capabilities that are actually available, but every preview must show:
-
-- the active capability and exact source class;
-- whether the result is WebGL reference, browser-native backdrop, or fallback;
-- unsupported and accessibility states;
-- capability-specific controls that cannot honestly be shared; and
-- measured lifecycle, source-ownership, and visual evidence for the chosen target.
-
-The workbench cannot imply that a CSS/backdrop preview proves WebGL output, or that WebGL over an explicit texture proves arbitrary DOM backdrop behavior. It is a diagnostic/tuning surface, not an abstraction that erases browser composition boundaries.
-
-## Rejected alternatives
-
-- Same-material owned-DOM SVG parity: rejected because `SourceGraphic` does not expose already-composited backdrop pixels. The honest candidate became an opaque outlined slab and pinched high-frequency content.
-- Renderer-specific SVG retuning: rejected because it would falsely preserve a shared-material claim and would not solve the missing backdrop input.
-- Shared retuning after Stage A acceptance: rejected because it would regress or reopen the locked WebGL result.
-- CSS borders, lighting gradients, inset strokes, decorative masks, or continuous perimeters on the WebGL success path: rejected because they draw the material instead of deriving it from renderer light.
-- Arbitrary DOM capture, `html2canvas`, screenshot textures, hidden duplicated substrates, and non-portable SVG background inputs: rejected for ownership, privacy, performance, lifecycle, and honesty reasons.
-- Silent renderer substitution: rejected because it conceals capability and fidelity differences from developers and users.
-
-## Milestone 2 authorization and accepted slice
-
-The owner explicitly accepted this reframe and authorized one capability-scoped implementation slice: explicit video. That slice satisfied the following entry contract; every future capability slice must satisfy it independently:
-
-1. The requested slice names exactly one source class and capability: explicit-source WebGL, semantic overlay, future browser-native backdrop research, or fallback.
-2. Its public promise does not claim WebGL/DOM/backdrop parity, automatic DOM capture, or a frozen cross-renderer material schema.
-3. The accepted Stage A WebGL reference, its 27 snapshot baselines, field contract, material ID, lifecycle behavior, and artifact pack remain locked.
-4. The API design makes source ownership, origin cleanliness, capability detection, fallback reason, SSR output, hydration, accessibility behavior, and cleanup explicit.
-5. Test gates cover deterministic renderer inputs, computed-style boundaries, semantic keyboard/accessibility behavior, reduced motion/transparency, forced colors, SSR/hydration, context loss, resize/DPR, idle scheduling, cleanup, source security failure, and production build behavior.
-6. Evidence gates include development and built-production runs in Chromium, Firefox, and Playwright WebKit; original-resolution visual review; hashes for immutable baselines and candidate artifacts; and qualified statements for real Safari/iOS coverage.
-7. Any future backdrop research starts with a browser capability/support proof and a separately named visual contract. It cannot inherit WebGL acceptance.
-
-The owner/orchestrator accepted this contract for explicit video only. `/m2/video` passed its development and built-production matrices across Chromium, Firefox, and Playwright WebKit, preserved the locked M1 material and baselines, and passed direct original-resolution visual review. Evidence and qualifications are recorded in `docs/gates/M2-EXPLICIT-VIDEO-REPORT.md`.
-
-The next authorized gate is an explicit architecture decision naming any additional capability-scoped slice. The workbench, public schema freeze, framework wrappers, image/canvas expansion, CSS/backdrop research, legacy Mode C changes, publication, deployment, push, and pull request creation are not implied by M2 acceptance.
+The authoritative status and stop rule live in `docs/RECOVERY.md`.
