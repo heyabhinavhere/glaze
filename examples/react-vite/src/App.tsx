@@ -1,7 +1,9 @@
 import {
   GlazeDiagnostics,
+  GlazeRefractSource,
+  GlazeRoot,
   GlazeSegmentedControl,
-  GlazeSurface,
+  GlazeSwitch,
 } from "@glazelab/react";
 import { useState } from "react";
 
@@ -11,33 +13,46 @@ const segments = [
   { id: "month", label: "Month" },
 ] as const;
 
+function Artwork() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560">
+      <rect width="900" height="560" fill="#132a35" />
+      <circle cx="690" cy="80" r="260" fill="#d25386" opacity=".86" />
+      <circle cx="120" cy="520" r="320" fill="#1f7682" opacity=".9" />
+      <path d="M-80 390 C180 120 480 650 980 200" fill="none" stroke="#eec55b" strokeWidth="34" opacity=".8" />
+    </svg>
+  );
+}
+
 export function App() {
   const [period, setPeriod] = useState("week");
+  const [live, setLive] = useState(true);
 
   return (
-    <main>
-      <p className="eyebrow">Fresh React + Vite consumer</p>
-      <h1>Glaze stays semantic.</h1>
-      <p className="lede">
-        This app imports only the published entrypoints. Twenty surfaces remain
-        static after first paint.
-      </p>
-      <GlazeSegmentedControl
-        aria-label="Report period"
-        material="regular"
-        onValueChange={setPeriod}
-        segments={segments}
-        value={period}
-      />
-      <section aria-label="Static surface grid" className="surface-grid">
-        {Array.from({ length: 20 }, (_, index) => (
-          <GlazeSurface as="article" key={index} material={index % 2 ? "clear" : "regular"}>
-            <span>Surface {index + 1}</span>
-            <strong>{period}</strong>
-          </GlazeSurface>
-        ))}
-      </section>
-      <GlazeDiagnostics aria-label="React consumer diagnostics" material="regular" />
-    </main>
+    <GlazeRoot>
+      <main>
+        <p className="eyebrow">Fresh React + Vite consumer</p>
+        <h1>Glaze stays semantic.</h1>
+        <p className="lede">
+          The installed package renders one owned React source, one WebGL
+          renderer, and ordinary buttons above it.
+        </p>
+        <GlazeRefractSource className="demo" source={<Artwork />}>
+          <span className="demo-label">Selected period: {period}</span>
+          <GlazeSegmentedControl
+            aria-label="Report period"
+            onValueChange={setPeriod}
+            segments={segments}
+            value={period}
+          />
+          <GlazeSwitch
+            aria-label="Live optics"
+            checked={live}
+            onCheckedChange={setLive}
+          />
+          <GlazeDiagnostics compact />
+        </GlazeRefractSource>
+      </main>
+    </GlazeRoot>
   );
 }

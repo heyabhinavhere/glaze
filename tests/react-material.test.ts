@@ -1,55 +1,57 @@
 import { describe, expect, it } from "vitest";
 import {
-  glazeMaterials,
+  defaultGlazeMaterial,
+  defaultGlazeMotion,
+  glazeMaterialPresets,
   resolveGlazeMaterial,
+  resolveGlazeMotion,
 } from "../packages/react/src/material";
 
 describe("resolveGlazeMaterial", () => {
-  it("is deterministic and does not mutate a named preset", () => {
-    const before = JSON.stringify(glazeMaterials.regular);
-    const first = resolveGlazeMaterial("regular");
-    const second = resolveGlazeMaterial("regular");
+  it("is deterministic and does not mutate the accepted preset", () => {
+    const before = JSON.stringify(glazeMaterialPresets.accepted);
+    const first = resolveGlazeMaterial(glazeMaterialPresets.accepted);
+    const second = resolveGlazeMaterial(glazeMaterialPresets.accepted);
     expect(first).toEqual(second);
-    expect(JSON.stringify(glazeMaterials.regular)).toBe(before);
+    expect(JSON.stringify(glazeMaterialPresets.accepted)).toBe(before);
+    expect(first).toEqual(defaultGlazeMaterial);
   });
 
   it("clamps public values and normalizes colors and angles", () => {
     const result = resolveGlazeMaterial({
-      clarity: 140,
-      frost: -20,
-      tint: "#AbC",
-      tintOpacity: 80,
-      depth: Number.NaN,
-      edge: 120,
-      lightAngle: -45,
-      radius: -8,
-      motion: "none",
+      refraction: 12,
+      thickness: -4,
+      dispersion: Number.NaN,
+      roughness: 7,
+      transmission: -1,
+      tint: { color: "#AbC", opacity: 4 },
+      lighting: { angle: -45, highlight: 8, occlusion: -3 },
     });
-    expect(result).toMatchObject({
-      clarity: 100,
-      frost: 0,
-      tint: "#aabbcc",
-      tintOpacity: 50,
-      depth: 0,
-      edge: 100,
-      lightAngle: 315,
-      radius: 0,
-      motion: "none",
+    expect(result).toEqual({
+      refraction: 2,
+      thickness: 0,
+      dispersion: 0,
+      roughness: 1,
+      transmission: 0,
+      tint: { color: "#aabbcc", opacity: 1 },
+      lighting: { angle: 315, highlight: 2, occlusion: 0 },
     });
-    expect(result.cssVariables["--glaze-motion-duration"]).toBe("0ms");
   });
 
-  it("falls back to the regular preset for an unknown runtime name", () => {
-    expect(resolveGlazeMaterial("unknown" as "regular")).toEqual(
-      resolveGlazeMaterial("regular"),
-    );
-  });
-
-  it("normalizes unsupported runtime motion values", () => {
-    const result = resolveGlazeMaterial({
-      motion: "instant" as "subtle",
+  it("keeps nested defaults when only one material value changes", () => {
+    expect(resolveGlazeMaterial({ refraction: 0.5 })).toEqual({
+      ...defaultGlazeMaterial,
+      refraction: 0.5,
     });
-    expect(result.motion).toBe("subtle");
-    expect(result.cssVariables["--glaze-motion-duration"]).toBe("180ms");
+  });
+});
+
+describe("resolveGlazeMotion", () => {
+  it("preserves accepted defaults and clamps unsafe spring values", () => {
+    expect(resolveGlazeMotion()).toEqual(defaultGlazeMotion);
+    expect(resolveGlazeMotion({ stiffness: 5000, damping: -1 })).toEqual({
+      stiffness: 1000,
+      damping: 0,
+    });
   });
 });

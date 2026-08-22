@@ -6,16 +6,15 @@ Accepted recovery branch: `aj/glaze-optics-recovery` at `162c1cb`
 
 Active product branch: `aj/glaze-component-system`
 
-Active gate: public API freeze after the component-system proof
+Active gate: final verification after the public API and workbench proof
 
 Owner visual decision: **ACCEPTED 2026-08-22**
 
 ## Product promise
 
 Glaze is a React and Next.js component system for semantic controls with
-liquid-glass optics over explicitly owned visual sources. A later in-app
-developer workbench will tune and export the exact material used by those
-components.
+liquid-glass optics over explicitly owned visual sources. Its in-app developer
+workbench tunes and exports the exact material used by those components.
 
 ## Owner acceptance
 
@@ -107,16 +106,32 @@ Component extraction was authorized in this order:
 2. **Complete:** prove owned decoration and explicit media across segmented
    control, switch, slider, and one live video source without changing the
    material;
-3. **Active:** freeze the serializable public API; and
-4. **Pending:** build the workbench against the exact live material after the
+3. **Complete:** freeze the serializable public API; and
+4. **Complete:** build the workbench against the exact live material after the
    API is frozen.
 
-The multi-component proof has passed, so the public contract may now be
-implemented and frozen. Workbench expansion remains blocked until that freeze
-is complete. Publication, deployment, release PRs, and component-specific
-optical patches remain blocked. Arbitrary DOM capture, `html2canvas`, automatic
-source detection, and CSS glassmorphism as the primary renderer remain
-permanently rejected.
+The public contract and exact-material workbench now pass development and
+optimized-production matrices in Chromium, Firefox, and WebKit. Packed React
+18, React 19, and Next.js 16 consumers also pass from the installed tarball.
+Publication, deployment, release PRs, physical-device approval, and
+component-specific optical patches remain blocked. Arbitrary DOM capture,
+`html2canvas`, automatic source detection, and CSS glassmorphism as the primary
+renderer remain permanently rejected.
+
+## Public API and workbench proof
+
+The active public contract is documented in `docs/PUBLIC-API.md` and emitted
+from `@glazelab/react`. `/` and `/workbench` consume only that package surface.
+Both source capabilities share the frozen material registry and the
+development workbench edits that exact registry. Browser checks prove that a
+material edit changes the live owned-source canvas without replacing either
+source renderer.
+
+The ESM renderer and workbench are separate lazy chunks. The initial entry and
+shared chunks remain within the original 8 KiB brotli budget. The accepted
+optics chunk measured 6,078 bytes brotli; its enforced ceiling is 10% above
+that measurement. Workbench output is disabled by default in production unless
+the consumer deliberately enables it.
 
 ## Component-system proof
 
@@ -162,6 +177,11 @@ corepack pnpm test:optical-kernel:production
 corepack pnpm test:component-proof:unit
 corepack pnpm test:component-proof
 corepack pnpm test:component-proof:production
+corepack pnpm test:public-api
+corepack pnpm test:public-api:production
+corepack pnpm test:consumers
+corepack pnpm test:packed-consumers
+corepack pnpm --filter @glazelab/react size
 corepack pnpm --filter playground typecheck
 corepack pnpm --filter playground lint
 corepack pnpm --filter playground build

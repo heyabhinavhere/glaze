@@ -50,8 +50,8 @@ wash, uniform outline, double contour, CSS glow, or scene-specific tuning.
 | Capability | Input | Renderer | Semantic contract | Current status |
 | --- | --- | --- | --- | --- |
 | Optical kernel | Owned Canvas 2D fixture | Separate GPU track/selection maps | One DOM radiogroup above output | Accepted 2026-08-22 |
-| Owned decoration | Visual-only, inert React layer | Accepted kernel over owned pixels | No interactive or identified duplicate content | Extraction authorized |
-| Explicit media | Origin-clean image, video, or canvas | Shared WebGL source with multiple lenses | Controls remain DOM | Extraction authorized |
+| Owned decoration | Visual-only, inert React layer | Accepted kernel over owned pixels | No interactive or identified duplicate content | Public and verified |
+| Explicit media | Origin-clean image, video, or canvas | Shared WebGL source with multiple lenses | Controls remain DOM | Public and verified |
 | CSS fallback | No sampleable source required | Legible non-optical CSS surface | Full semantics preserved | Retained |
 | Arbitrary page backdrop | Surrounding live DOM | None | Unsupported | Rejected |
 
@@ -61,11 +61,11 @@ not be described as optical fidelity.
 
 ## React and Next.js boundary
 
-Pages and layouts remain Server Components. The optical experiment is a
-narrow Client Component because it owns state, events, Canvas, WebGL, browser
-media queries, and teardown. Any later public material object must stay plain
-and serializable. Renderer code must be lazy-loaded when the optical capability
-is requested; the pure material entry must remain server-safe.
+Pages and layouts remain Server Components. The public optical surfaces are
+narrow Client Components because they own state, events, Canvas, WebGL,
+browser media queries, and teardown. The material object is plain and
+serializable. Renderer code is lazy-loaded only when an optical source is
+requested; the pure material entry remains server-safe.
 
 ## Lifecycle requirements
 
@@ -73,7 +73,8 @@ is requested; the pure material entry must remain server-safe.
 - Spring animation schedules bounded frames and stops when settled.
 - Video will use presented-frame callbacks rather than a permanent RAF.
 - DPR is capped at 2 and resize/zero-size transitions remain recoverable.
-- Context loss and unsafe uploads fail closed to the semantic fallback.
+- Context loss fails closed to the semantic fallback and restoration creates a
+  fresh renderer; unsafe uploads remain in the fallback with a visible reason.
 - Every texture, framebuffer, buffer, program, observer, callback, and listener
   is released by its owner.
 
@@ -82,7 +83,8 @@ is requested; the pure material entry must remain server-safe.
 Automation validates map contracts, source ownership, semantics, lifecycle,
 fallback, bounds, and regression metrics. It cannot certify beauty. The owner
 explicitly accepted the live, full-scale kernel on 2026-08-22, unlocking source
-adapters and component extraction. Public API design and workbench work remain
-blocked until the unchanged material passes the multi-component proof.
+adapters and component extraction. The unchanged material has since passed the
+multi-component proof, frozen public API, exact-material workbench, and public
+development/production browser matrices.
 
 The authoritative status and stop rule live in `docs/RECOVERY.md`.

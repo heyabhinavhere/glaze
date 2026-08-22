@@ -1,8 +1,9 @@
 # `@glazelab/react`
 
-Semantic, CSS-first glass surfaces and controls for React and Next.js.
+Semantic liquid-glass controls over explicitly owned React and media sources.
 
-Status: `0.1.0-alpha.0` release candidate. Not yet published to npm.
+Status: `0.1.0-alpha.0`, owner-accepted optical kernel and frozen public API.
+Not yet published to npm.
 
 ## Install
 
@@ -10,93 +11,144 @@ Status: `0.1.0-alpha.0` release candidate. Not yet published to npm.
 pnpm add @glazelab/react
 ```
 
-React and React DOM 18 or newer are peer dependencies.
-
-## Quick start
-
-Import the stylesheet once near the application root:
+React and React DOM 18 or newer are peer dependencies. Import the stylesheet
+once near the application root:
 
 ```tsx
 import "@glazelab/react/styles.css";
 ```
 
-Then render a real semantic control:
+## Owned React decoration
+
+`GlazeRefractSource` owns one visual-only SVG source. The source is wrapped in
+an inert, `aria-hidden` subtree; semantic controls remain a single ordinary DOM
+tree above the optical canvas.
 
 ```tsx
-import { GlazeSegmentedControl } from "@glazelab/react";
+import {
+  GlazeRefractSource,
+  GlazeRoot,
+  GlazeSegmentedControl,
+} from "@glazelab/react";
 
 export function PeriodControl() {
   return (
-    <GlazeSegmentedControl
-      aria-label="Report period"
-      defaultValue="week"
-      material="regular"
-      segments={[
-        { id: "day", label: "Day" },
-        { id: "week", label: "Week" },
-        { id: "month", label: "Month" },
-      ]}
-    />
+    <GlazeRoot>
+      <GlazeRefractSource
+        source={(
+          <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+            <rect width="800" height="500" fill="#15334a" />
+            <circle cx="620" cy="80" r="240" fill="#d9588a" />
+          </svg>
+        )}
+      >
+        <GlazeSegmentedControl
+          aria-label="Report period"
+          defaultValue="week"
+          segments={[
+            { id: "day", label: "Day" },
+            { id: "week", label: "Week" },
+            { id: "month", label: "Month" },
+          ]}
+        />
+      </GlazeRefractSource>
+    </GlazeRoot>
   );
 }
 ```
 
-The component renders buttons with radio-group semantics. Arrow Left/Right, Home, End, pointer selection, focus visibility, disabled options, forced colors, and reduced motion are supported.
+Owned decoration must not contain IDs, forms, labels, interactive or editable
+content, event handlers, `tabIndex`, `dangerouslySetInnerHTML`, or explicitly
+sensitive nodes. Development builds warn and select the CSS fallback when the
+contract is violated.
 
-## Next.js App Router
+## Explicit media
 
-Import package CSS from `app/layout.tsx`:
+`GlazeMediaSurface` samples an explicit image, video, or canvas. Every media
+surface owns one source texture and one lazy WebGL renderer shared by all of
+its control lenses.
 
 ```tsx
-import "@glazelab/react/styles.css";
+<GlazeMediaSurface
+  source={{
+    type: "video",
+    sources: [
+      { src: "/scene.webm", type: "video/webm" },
+      { src: "/scene.mp4", type: "video/mp4" },
+    ],
+  }}
+>
+  <GlazeSwitch aria-label="Live optics" defaultChecked />
+  <GlazeSlider aria-label="Transmission" defaultValue={62} />
+</GlazeMediaSurface>
 ```
 
-A Server Component may render Glaze with serializable props. Use a small Client Component when you need controlled state or callbacks.
+Cross-origin image/video sources must be CORS-enabled and origin-clean. Canvas
+sources provide a `draw(context, size)` function and may provide
+`subscribe(invalidate)` for demand-driven updates.
 
-The emitted component entry preserves `"use client"`. The `@glazelab/react/material` subpath is pure and safe to import in server code.
+## Material and workbench
+
+`GlazeRoot` holds serializable named materials. `useGlazeMaterial(name,
+defaults)` reads the live resolved value. `GlazeWorkbench` edits that exact
+registry—there is no separate preview renderer—and exports canonical JSON or a
+React snippet.
+
+```tsx
+<GlazeRoot materials={{ product: { refraction: 1.1 } }}>
+  <GlazeRefractSource material="product" source={<Artwork />}>
+    <GlazeSegmentedControl {...props} />
+    <GlazeDiagnostics />
+  </GlazeRefractSource>
+  <GlazeWorkbench material="product" />
+</GlazeRoot>
+```
+
+The workbench is enabled by default only in development. Pass `enabled` to opt
+in deliberately in production. Material fields are `refraction`, `thickness`,
+`dispersion`, `roughness`, `transmission`, `tint`, and directional `lighting`;
+motion uses `stiffness` and `damping`.
 
 ## Public surface
 
 ```ts
 export {
   GlazeDiagnostics,
+  GlazeMediaSurface,
+  GlazeRefractSource,
+  GlazeRoot,
   GlazeSegmentedControl,
-  GlazeSurface,
-  glazeMaterials,
-  resolveGlazeMaterial,
+  GlazeSlider,
+  GlazeSwitch,
+  GlazeWorkbench,
+  useGlazeMaterial,
 } from "@glazelab/react";
 ```
 
-Named materials are `clear`, `regular`, `frosted`, and `dark`. A custom material may set:
-
-- `clarity`: `0–100`
-- `frost`: `0–100`
-- `tint`: six- or three-digit hex color
-- `tintOpacity`: `0–50`
-- `depth`: `0–100`
-- `edge`: `0–100`
-- `lightAngle`: normalized to `0–359`
-- `radius`: non-negative pixels
-- `motion`: `none`, `subtle`, or `expressive`
-
-Runtime values are normalized without mutating the input or named presets.
+The pure `@glazelab/react/material` subpath is safe in Server Components and
+other server code. The React entry preserves its client boundary, while pages
+and layouts may remain Server Components and pass serializable props/slots.
+The WebGL renderer and workbench panel are separate lazy ESM chunks.
 
 ## Capability truth
 
-`css` is the supported V1 renderer. `explicit-media`, `owned-decoration`, and `page-backdrop` are named so a consumer can request and inspect them, but the public package deliberately falls back to CSS and reports the reason through `data-glaze-fallback` and `GlazeDiagnostics`.
+Supported optical capabilities are `owned-decoration` and `explicit-media`.
+Unsupported environments use `css-fallback`; `GlazeDiagnostics` and surface
+data attributes expose the requested capability, effective capability,
+renderer, and reason.
 
-Glaze V1 does not claim arbitrary DOM refraction. It does not replace semantic controls with canvas, capture the page, duplicate interactive descendants, schedule continuous animation frames, or inject first-paint styles at runtime.
+Glaze does not capture arbitrary DOM, infer page backdrops, duplicate semantic
+controls, promise cross-browser pixel identity, or claim Apple parity. The CSS
+fallback is accessibility and failure behavior, not the primary material.
 
-## Styling
+## Verification budgets
 
-Glaze styles live in the `glaze` CSS cascade layer. Application styles outside a layer can override layout, color, and typography. Material variables are private implementation details; prefer the public material object rather than persisting CSS variables.
+- initial ESM entry and shared chunks: 8 KB brotli;
+- accepted optics chunk: 6,078 bytes brotli, with a 10% regression ceiling;
+- pure material entry: 2 KB brotli; and
+- stylesheet: 6 KB gzip.
 
-## Package budgets
-
-- root entry: 8 KB brotli maximum
-- pure material entry: 2 KB brotli maximum
-- stylesheet: 6 KB gzip maximum
-
-Run `pnpm build`, `pnpm typecheck`, `pnpm lint`, and `pnpm size` before packing.
+Run `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm size`, unit tests, public
+API browser matrices, and packed-consumer tests before release review.
 
 License: MIT.

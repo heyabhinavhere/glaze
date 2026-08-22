@@ -6,15 +6,15 @@ Product line: `aj/glaze-component-system`
 
 Accepted optical source: `aj/glaze-optics-recovery` at `162c1cb`
 
-Status: **component-system proof passed; public API freeze active**
+Status: **public API and workbench passed; release verification active**
 
 ## Product target
 
 Glaze is a React and Next.js component system that gives semantic controls
 convincing liquid-glass optics over explicitly owned visual sources. The
-accepted material now passes the private multi-component proof. The next gate
-freezes the serializable public API; an in-app developer workbench will then
-tune and export that exact live material.
+accepted material now powers the frozen public component API and the in-app
+developer workbench. The workbench tunes and exports the exact live material;
+it does not own a second preview renderer.
 
 The product does not promise arbitrary page capture, automatic backdrop
 inference, cross-browser pixel identity, or Apple parity.
@@ -46,8 +46,17 @@ demand-driven and stops once the source and spring are idle.
   React SVG and one same-origin live video. Each source has one renderer shared
   by a segmented control, switch, and slider.
 - The component proof passes its development and optimized-production browser
-  matrices in Chromium, Firefox, and WebKit. The public API may now be frozen;
-  the workbench, publication, deployment, and release remain later gates.
+  matrices in Chromium, Firefox, and WebKit.
+- `/` and `/workbench` dogfood the frozen package API over owned React artwork
+  and explicit video. Development and optimized-production public matrices
+  pass in Chromium, Firefox, and WebKit.
+- The exact-material workbench, truthful diagnostics, lazy optics/workbench
+  chunks, context restoration, zero-idle scheduling, and source-contract
+  failure behavior pass their public browser gates.
+- Packed React 18, React 19, and Next.js 16 consumers build and run from the
+  installed tarball rather than a workspace link.
+- Publication, deployment, merge, and physical-device approval remain later
+  owner-controlled release gates.
 
 The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 
@@ -73,10 +82,10 @@ The decision ledger and stopping rules live in `docs/RECOVERY.md`.
 1. **Complete:** owner accepts one real-size optical kernel.
 2. **Complete:** the unchanged material proves segmented control, switch, and
    slider across owned decoration and explicit media.
-3. **Active:** the serializable public material/API is frozen.
-4. The workbench is connected to the exact runtime material.
-5. Cross-browser, packed-consumer, physical-device, accessibility, and release
-   gates run before merge or publication.
+3. **Complete:** the serializable public material/API is frozen.
+4. **Complete:** the workbench is connected to the exact runtime material.
+5. **Active:** repository, accessibility, packed-consumer, physical-device,
+   and release gates run before merge or publication.
 
 No later gate may begin early.
 
@@ -89,6 +98,11 @@ corepack pnpm test:optical-kernel:production
 corepack pnpm test:component-proof:unit
 corepack pnpm test:component-proof
 corepack pnpm test:component-proof:production
+corepack pnpm test:public-api
+corepack pnpm test:public-api:production
+corepack pnpm test:consumers
+corepack pnpm test:packed-consumers
+corepack pnpm --filter @glazelab/react size
 corepack pnpm --filter playground typecheck
 corepack pnpm --filter playground lint
 corepack pnpm --filter playground build

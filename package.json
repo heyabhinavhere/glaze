@@ -15,7 +15,7 @@
     "lint": "corepack pnpm -r lint",
     "size": "corepack pnpm --filter @glazelab/core size && corepack pnpm --filter @glazelab/react size",
     "typecheck": "corepack pnpm -r typecheck",
-    "test:unit": "vitest run tests/displacement.test.ts tests/m2-explicit-video.test.ts tests/react-material.test.ts packages/react/tests/components.test.tsx",
+    "test:unit": "vitest run tests/displacement.test.ts tests/m2-explicit-video.test.ts tests/react-material.test.ts tests/public-api.test.ts packages/react/tests/components.test.tsx",
     "test:v1": "playwright test -c playwright.v1.config.ts",
     "test:v1:production": "V1_PRODUCTION=1 playwright test -c playwright.v1.config.ts",
     "test:consumers": "corepack pnpm --filter @glazelab/react build && corepack pnpm --filter @glazelab/example-react-vite build && corepack pnpm --filter @glazelab/example-next-app build && playwright test -c playwright.consumers.config.ts",
@@ -34,7 +34,9 @@
     "test:optical-kernel:production": "OPTICAL_KERNEL_PRODUCTION=1 playwright test -c playwright.optical-kernel.config.ts tests/optical-kernel.spec.ts",
     "test:component-proof:unit": "vitest run tests/component-system.test.ts",
     "test:component-proof": "playwright test -c playwright.component-proof.config.ts tests/component-system.spec.ts",
-    "test:component-proof:production": "COMPONENT_PROOF_PRODUCTION=1 playwright test -c playwright.component-proof.config.ts tests/component-system.spec.ts"
+    "test:component-proof:production": "COMPONENT_PROOF_PRODUCTION=1 playwright test -c playwright.component-proof.config.ts tests/component-system.spec.ts",
+    "test:public-api": "corepack pnpm --filter @glazelab/react build && playwright test -c playwright.public-api.config.ts tests/public-api.spec.ts",
+    "test:public-api:production": "corepack pnpm --filter @glazelab/react build && corepack pnpm --filter playground build && PUBLIC_API_PRODUCTION=1 playwright test -c playwright.public-api.config.ts tests/public-api.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

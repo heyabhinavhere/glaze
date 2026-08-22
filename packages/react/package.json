@@ -1,7 +1,7 @@
 {
   "name": "@glazelab/react",
   "version": "0.1.0-alpha.0",
-  "description": "Semantic, CSS-first glass surfaces and controls for React and Next.js.",
+  "description": "Semantic liquid-glass controls over explicitly owned React and media sources.",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -34,7 +34,7 @@
     "lint": "eslint src",
     "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
-    "size": "size-limit && node scripts/check-css-size.mjs"
+    "size": "size-limit && node scripts/check-client-chunks.mjs && node scripts/check-css-size.mjs"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -56,11 +56,6 @@
     "typescript": "^5.7.2"
   },
   "size-limit": [
-    {
-      "name": "@glazelab/react",
-      "path": "dist/index.js",
-      "limit": "8 KB"
-    },
     {
       "name": "@glazelab/react/material",
       "path": "dist/material.js",

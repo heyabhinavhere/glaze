@@ -1,5 +1,5 @@
-import { GlazeWorkbench } from "./_components/GlazeWorkbench";
+import { PublicWorkbenchDemo } from "./workbench/_components/PublicWorkbenchDemo";
 
 export default function Home() {
-  return <GlazeWorkbench />;
+  return <PublicWorkbenchDemo />;
 }

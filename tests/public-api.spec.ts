@@ -1,0 +1,234 @@
+import { expect, test, type Page } from "@playwright/test";
+
+async function openWorkbench(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  const response = await page.goto("/workbench");
+  expect(response?.status()).toBe(200);
+  const surfaces = page.locator("[data-glaze-capability-requested]");
+  await expect(surfaces).toHaveCount(2);
+  for (const surface of await surfaces.all()) {
+    await expect(surface).toHaveAttribute("data-glaze-renderer", "webgl", {
+      timeout: 15_000,
+    });
+    await expect(surface).toHaveAttribute("data-glaze-control-count", "3");
+  }
+  await expect(page.locator("[data-glaze-workbench='true']")).toBeVisible();
+  await expect(page.locator(".glaze-workbench__runtime")).toContainText(
+    "owned-decoration → owned-decoration",
+  );
+  await expect(page.locator(".glaze-workbench__runtime")).toContainText(
+    "explicit-media → explicit-media",
+  );
+  await expect(page.locator("[data-nextjs-dialog]")).toHaveCount(0);
+  expect(errors).toEqual([]);
+  return surfaces;
+}
+
+test("server output exposes truthful source and semantic contracts", async ({
+  request,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "one SSR request is enough");
+  const response = await request.get("/workbench");
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  expect(html).toContain("The live material is now the workbench.");
+  expect(html).toContain(
+    'data-glaze-capability-requested="owned-decoration"',
+  );
+  expect(html).toContain(
+    'data-glaze-capability-requested="explicit-media"',
+  );
+  expect(html.match(/role="radiogroup"/g)?.length).toBeGreaterThanOrEqual(2);
+  expect(html.match(/role="switch"/g)).toHaveLength(2);
+  expect(html.match(/type="range"/g)?.length).toBeGreaterThanOrEqual(2);
+  expect(html).toContain("/m1-flower.webm");
+  expect(html).toContain("/m1-flower.mp4");
+});
+
+test("uses one renderer per source and one authoritative control tree", async ({
+  page,
+}, testInfo) => {
+  const surfaces = await openWorkbench(page);
+  const rendererIds = await surfaces.evaluateAll((items) =>
+    items.map((item) => item.getAttribute("data-glaze-renderer-id")),
+  );
+  expect(rendererIds.every(Boolean)).toBe(true);
+  expect(new Set(rendererIds).size).toBe(2);
+
+  const ownedInput = page.locator("[data-glaze-owned-decoration='true']");
+  await expect(ownedInput).toHaveCount(1);
+  await expect(ownedInput).toHaveAttribute("aria-hidden", "true");
+  await expect(ownedInput.locator("svg")).toHaveCount(1);
+  await expect(
+    ownedInput.locator(
+      "button,input,select,textarea,form,a[href],[id],[tabindex],[contenteditable]",
+    ),
+  ).toHaveCount(0);
+
+  for (const surface of await surfaces.all()) {
+    await expect(surface.getByRole("radio")).toHaveCount(3);
+    await expect(surface.getByRole("switch")).toHaveCount(1);
+    await expect(surface.getByRole("slider")).toHaveCount(1);
+    await expect(surface.locator("canvas[data-glaze-output]")).toHaveCount(1);
+  }
+
+  const screenshotPath = testInfo.outputPath(
+    `public-workbench-${testInfo.project.name}.png`,
+  );
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  await testInfo.attach("full-viewport-public-workbench", {
+    path: screenshotPath,
+    contentType: "image/png",
+  });
+});
+
+test("controlled parent rerenders do not replace either source renderer", async ({
+  page,
+}) => {
+  const surfaces = await openWorkbench(page);
+  const before = await surfaces.evaluateAll((items) =>
+    items.map((item) => item.getAttribute("data-glaze-renderer-id")),
+  );
+
+  const owned = surfaces.filter({
+    has: page.getByRole("radiogroup", { name: "Owned source view mode" }),
+  });
+  await owned.getByRole("radio", { name: "Form" }).click();
+  await owned.getByRole("switch", { name: "Owned source live optics" }).click();
+  await owned.getByRole("slider", { name: "Owned source transmission" }).fill("37");
+  await expect(
+    owned.getByRole("radio", { name: "Form" }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    owned.getByRole("slider", { name: "Owned source transmission" }),
+  ).toHaveValue("37");
+
+  const after = await surfaces.evaluateAll((items) =>
+    items.map((item) => item.getAttribute("data-glaze-renderer-id")),
+  );
+  expect(after).toEqual(before);
+});
+
+test("workbench edits and exports the live material without replacing renderers", async ({
+  page,
+}) => {
+  const surfaces = await openWorkbench(page);
+  const beforeIds = await surfaces.evaluateAll((items) =>
+    items.map((item) => item.getAttribute("data-glaze-renderer-id")),
+  );
+  const owned = surfaces.nth(0);
+  const before = await owned.screenshot();
+
+  const refraction = page.getByRole("slider", { name: "Refraction" });
+  await refraction.fill("0");
+  await expect(page.locator(".glaze-workbench__export code")).toContainText(
+    '"refraction": 0',
+  );
+  await page.waitForTimeout(100);
+  const after = await owned.screenshot();
+  expect(after.equals(before)).toBe(false);
+
+  const afterIds = await surfaces.evaluateAll((items) =>
+    items.map((item) => item.getAttribute("data-glaze-renderer-id")),
+  );
+  expect(afterIds).toEqual(beforeIds);
+});
+
+test("restores a lost WebGL context with a fresh renderer", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "one lifecycle probe is enough");
+  const surfaces = await openWorkbench(page);
+  const owned = surfaces.nth(0);
+  const before = await owned.getAttribute("data-glaze-renderer-id");
+  const supported = await owned.locator("canvas[data-glaze-output]").evaluate(
+    (canvas) => {
+      const gl = (canvas as HTMLCanvasElement).getContext("webgl2");
+      const extension = gl?.getExtension("WEBGL_lose_context");
+      if (!extension) return false;
+      extension.loseContext();
+      window.setTimeout(() => extension.restoreContext(), 80);
+      return true;
+    },
+  );
+  test.skip(!supported, "WEBGL_lose_context is unavailable");
+  await expect(owned).toHaveAttribute("data-glaze-renderer", "webgl", {
+    timeout: 10_000,
+  });
+  await expect.poll(
+    () => owned.getAttribute("data-glaze-renderer-id"),
+  ).not.toBe(before);
+});
+
+test("forced colors selects and explains the semantic CSS fallback", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "one preference probe is enough");
+  await page.emulateMedia({ forcedColors: "active" });
+  const response = await page.goto("/workbench");
+  expect(response?.status()).toBe(200);
+  const surfaces = page.locator("[data-glaze-capability-requested]");
+  await expect(surfaces).toHaveCount(2);
+  for (const surface of await surfaces.all()) {
+    await expect(surface).toHaveAttribute("data-glaze-renderer", "fallback");
+    await expect(surface).toHaveAttribute(
+      "data-glaze-capability-effective",
+      "css-fallback",
+    );
+    await expect(surface).toHaveAttribute(
+      "data-glaze-fallback",
+      "forced-colors-active",
+    );
+  }
+  await expect(page.getByRole("radiogroup", { name: "Owned source view mode" }))
+    .toBeVisible();
+});
+
+test("all sources stop scheduling frames when the video and springs are idle", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "one idle-loop probe is enough");
+  await page.addInitScript(() => {
+    const original = window.requestAnimationFrame.bind(window);
+    let scheduled = 0;
+    Object.defineProperty(window, "__glazeRafCount", {
+      get: () => scheduled,
+    });
+    window.requestAnimationFrame = (callback) => {
+      scheduled += 1;
+      return original(callback);
+    };
+  });
+  await openWorkbench(page);
+  await page.locator("video").evaluate((video) => video.pause());
+  await page.waitForTimeout(350);
+  const before = await page.evaluate(
+    () => (window as Window & { __glazeRafCount?: number }).__glazeRafCount,
+  );
+  await page.waitForTimeout(350);
+  const after = await page.evaluate(
+    () => (window as Window & { __glazeRafCount?: number }).__glazeRafCount,
+  );
+  expect(after).toBe(before);
+});
+
+test("runtime DOM contract violations fail visibly to CSS", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "one contract probe is enough");
+  const surfaces = await openWorkbench(page);
+  const owned = surfaces.nth(0);
+  await page.locator("[data-glaze-owned-decoration] svg").evaluate((svg) => {
+    svg.setAttribute("id", "invalid-owned-source");
+  });
+  await page.setViewportSize({ width: 1439, height: 1100 });
+  await expect(owned).toHaveAttribute("data-glaze-renderer", "fallback");
+  await expect(owned).toHaveAttribute(
+    "data-glaze-fallback",
+    /owned-decoration-prohibits:\[id\]/,
+  );
+});

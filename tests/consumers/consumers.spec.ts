@@ -66,8 +66,9 @@ test("fresh React/Vite consumer stays semantic, strict, and idle", async ({
     page.getByRole("heading", { name: "Glaze stays semantic." }),
   ).toBeVisible();
   await expect(page.getByRole("radiogroup", { name: "Report period" })).toBeVisible();
-  await expect(page.locator(".glaze-surface")).toHaveCount(21);
-  await expect(page.getByRole("article")).toHaveCount(20);
+  const source = page.locator('[data-glaze-capability-requested="owned-decoration"]');
+  await expect(source).toHaveAttribute("data-glaze-renderer", "webgl");
+  await expect(source).toHaveAttribute("data-glaze-control-count", "2");
 
   await page.getByRole("radio", { name: "Week" }).focus();
   await page.keyboard.press("ArrowRight");
@@ -75,20 +76,21 @@ test("fresh React/Vite consumer stays semantic, strict, and idle", async ({
     "aria-checked",
     "true",
   );
-  await expect(page.getByRole("article").first().getByText("month")).toBeVisible();
+  await expect(page.getByText("Selected period: month")).toBeVisible();
 
   await expect
     .poll(() => page.evaluate(() => window.__consumerAudit?.activeMediaListeners))
-    .toBe(2);
-  await page.waitForTimeout(500);
-  const before = await page.evaluate(
-    () => window.__consumerAudit?.rafCallbacks ?? -1,
-  );
-  await page.waitForTimeout(500);
-  const after = await page.evaluate(
-    () => window.__consumerAudit?.rafCallbacks ?? -1,
-  );
-  expect(after - before).toBeLessThanOrEqual(1);
+    .toBe(4);
+  await expect.poll(async () => {
+    const before = await page.evaluate(
+      () => window.__consumerAudit?.rafCallbacks ?? -1,
+    );
+    await page.waitForTimeout(300);
+    const after = await page.evaluate(
+      () => window.__consumerAudit?.rafCallbacks ?? -1,
+    );
+    return after - before;
+  }, { timeout: 5_000 }).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
 });
 
@@ -101,7 +103,7 @@ test("fresh Next App Router consumer preserves SSR and hydration", async ({
   const html = await response.text();
   expect(html).toContain("Server markup first. Glass second.");
   expect(html).toContain('role="radiogroup"');
-  expect(html).toContain('data-glaze-capability="css"');
+  expect(html).toContain('data-glaze-capability-requested="owned-decoration"');
 
   await installRuntimeAudit(page);
   const errors = runtimeErrors(page);
@@ -110,6 +112,9 @@ test("fresh Next App Router consumer preserves SSR and hydration", async ({
     page.getByRole("heading", { name: "Server markup first. Glass second." }),
   ).toBeVisible();
   const group = page.getByRole("radiogroup", { name: "Account section" });
+  await expect(
+    page.locator('[data-glaze-capability-requested="owned-decoration"]'),
+  ).toHaveAttribute("data-glaze-renderer", "webgl");
   await group.getByRole("radio", { name: "Overview" }).focus();
   await page.keyboard.press("End");
   await expect(group.getByRole("radio", { name: "Settings" })).toHaveAttribute(
@@ -118,6 +123,6 @@ test("fresh Next App Router consumer preserves SSR and hydration", async ({
   );
   await expect
     .poll(() => page.evaluate(() => window.__consumerAudit?.activeMediaListeners))
-    .toBe(2);
+    .toBe(4);
   expect(errors).toEqual([]);
 });

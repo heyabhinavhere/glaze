@@ -80,7 +80,7 @@ async function installBuildAndInspect(destination) {
     [
       "--input-type=module",
       "-e",
-      'import("@glazelab/react/material").then(({resolveGlazeMaterial}) => { if (resolveGlazeMaterial("regular").clarity !== 82) process.exit(1); })',
+      'import("@glazelab/react/material").then(({resolveGlazeMaterial}) => { if (resolveGlazeMaterial().refraction !== 1) process.exit(1); })',
     ],
     destination,
   );

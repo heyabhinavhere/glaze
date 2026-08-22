@@ -22,14 +22,25 @@ main { width: min(900px, calc(100% - 32px)); margin: 0 auto; padding: 72px 0; }
 .eyebrow { color: #8ba3aa; font: 11px/1.2 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .12em; }
 h1 { margin: 10px 0 0; font-size: clamp(38px, 7vw, 68px); letter-spacing: -.06em; }
 .lede { max-width: 560px; margin: 14px 0 28px; color: #9babb1; line-height: 1.6; }
-.glaze-segmented { color: #f4f8f9; }
-.surface-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 24px 0; }
-.surface-grid article { display: grid; min-height: 92px; padding: 14px; color: #eaf0f2; }
-.surface-grid span { color: #9badb3; font-size: 12px; }
-.surface-grid strong { align-self: end; font-size: 13px; text-transform: capitalize; }
+.demo {
+  min-height: 500px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 28px;
+}
+.demo .glaze-source-surface__content {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 24px;
+  min-height: 500px;
+  padding: 32px;
+}
+.demo-label { color: #e4f3f5; font: 12px/1.2 ui-monospace, monospace; text-transform: uppercase; }
+.glaze-segmented,
+.glaze-switch { color: #f4f8f9; }
+.glaze-diagnostics { position: absolute; right: 18px; bottom: 18px; left: 18px; }
 
 @media (max-width: 640px) {
   main { padding: 40px 0; }
-  .surface-grid { grid-template-columns: repeat(2, 1fr); }
   .glaze-segmented { min-width: 0; width: 100%; }
 }
